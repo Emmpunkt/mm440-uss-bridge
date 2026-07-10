@@ -1,0 +1,204 @@
+#include <WiFi.h>
+#include <WebServer.h>
+#include <ArduinoJson.h>
+#include "net_web.h"
+#include "config.h"
+#include "mm440.h"
+
+static WebServer server(80);
+static DriveControl* drv = nullptr;
+static bool apMode = false;
+
+bool wifiIsAp() { return apMode; }
+String wifiIp() { return apMode ? WiFi.softAPIP().toString() : WiFi.localIP().toString(); }
+
+// ------------------------------------------------------------
+// Eingebettete Oberfläche (eine Seite, pollt /api/status)
+// ------------------------------------------------------------
+static const char INDEX_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MM440 Bridge</title>
+<style>
+ body{font-family:system-ui,sans-serif;background:#111;color:#eee;margin:0;padding:1rem;max-width:640px;margin-inline:auto}
+ h1{font-size:1.2rem} .card{background:#1c1c1e;border-radius:10px;padding:1rem;margin-bottom:1rem}
+ .row{display:flex;justify-content:space-between;align-items:center;margin:.4rem 0}
+ button{background:#2d6cdf;color:#fff;border:0;border-radius:8px;padding:.6rem 1rem;font-size:1rem;cursor:pointer}
+ button.red{background:#c0392b} button.grey{background:#444}
+ .big{font-size:2rem;font-weight:700} .st{padding:.15rem .6rem;border-radius:6px;font-weight:600}
+ .st.RUNNING{background:#1e8e3e}.st.READY{background:#2d6cdf}.st.FAULT{background:#c0392b}
+ .st.MAINS_OFF{background:#555}.st.BOOTING{background:#b07d0f}.st.COMM_LOST{background:#8e44ad}
+ input[type=range]{width:100%} input[type=number],input[type=text]{background:#2a2a2c;color:#eee;border:1px solid #444;border-radius:6px;padding:.4rem;width:6rem}
+ .warn{color:#e6b400} .err{color:#ff6b6b} label{font-size:.9rem;color:#aaa}
+</style></head><body>
+<h1>MM440 USS Bridge</h1>
+
+<div class="card">
+ <div class="row"><span>Zustand</span><span id="state" class="st">–</span></div>
+ <div class="row"><span>Istfrequenz</span><span class="big"><span id="hz">0.0</span> Hz</span></div>
+ <div class="row"><span>ZSW</span><code id="zsw">0x0000</code></div>
+ <div class="row"><span id="alarm" class="warn"></span><span id="comm"></span></div>
+</div>
+
+<div class="card">
+ <div class="row"><span>Netzsch&uuml;tz</span>
+  <span><button id="mOn" onclick="cmd({cmd:'mains',on:true})">Ein</button>
+        <button id="mOff" class="red" onclick="cmd({cmd:'mains',on:false})">Aus</button></span></div>
+ <div class="row"><span>Motor</span>
+  <span><button onclick="cmd({cmd:'run',on:true})">Start</button>
+        <button class="red" onclick="cmd({cmd:'run',on:false})">Stopp</button>
+        <button class="grey" onclick="cmd({cmd:'ack'})">Quittieren</button></span></div>
+ <div class="row"><label>Sollwert: <b><span id="spv">0</span> Hz</b></label></div>
+ <input type="range" id="sp" min="0" max="50" step="0.5" value="0"
+        oninput="document.getElementById('spv').textContent=this.value"
+        onchange="cmd({cmd:'setpoint',hz:parseFloat(this.value)})">
+ <div class="row"><label><input type="checkbox" id="rev"
+        onchange="cmd({cmd:'reverse',on:this.checked})"> Drehrichtung umkehren</label></div>
+</div>
+
+<div class="card">
+ <b>Parameter</b>
+ <div class="row">
+  <span>P<input type="number" id="pnu" value="2010" min="0" max="3999">
+   Idx <input type="number" id="idx" value="0" min="0" max="255" style="width:4rem"></span>
+  <button class="grey" onclick="pread()">Lesen</button></div>
+ <div class="row">
+  <span>Wert <input type="text" id="pval" value="0">
+   <select id="ptype" style="background:#2a2a2c;color:#eee;border:1px solid #444;border-radius:6px;padding:.4rem">
+    <option value="int">Ganzzahl</option><option value="float">Float</option></select></span>
+  <span><button onclick="pwrite()">Schreiben</button>
+        <button class="grey" onclick="cmd({cmd:'save'})" title="P0971=1">EEPROM</button></span></div>
+ <div id="pres" class="row"></div>
+</div>
+<div class="card" style="font-size:.85rem;color:#888" id="stats"></div>
+
+<script>
+async function cmd(o){await fetch('/api/cmd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)});poll();}
+// Rohbits <-> Float (IEEE754, 32 Bit) — MM4-Float-Parameter sind immer Doppelwort
+function bitsToFloat(u){const b=new ArrayBuffer(4),v=new DataView(b);v.setUint32(0,u>>>0);return v.getFloat32(0);}
+function floatToBits(f){const b=new ArrayBuffer(4),v=new DataView(b);v.setFloat32(0,f);return v.getUint32(0);}
+function pIsFloat(){return document.getElementById('ptype').value=='float';}
+async function pread(){
+ const p=document.getElementById('pnu').value,i=document.getElementById('idx').value;
+ const r=await(await fetch(`/api/param?pnu=${p}&idx=${i}`)).json();
+ if(r.ok){
+  const val=pIsFloat()?bitsToFloat(r.value):r.value;
+  document.getElementById('pres').textContent=`P${p}[${i}] = ${val}`;
+  document.getElementById('pval').value=val;
+ }else document.getElementById('pres').textContent=`Fehler 0x${(r.err||0).toString(16)}`;}
+async function pwrite(){
+ const raw=document.getElementById('pval').value;
+ let val,dw;
+ if(pIsFloat()){val=floatToBits(parseFloat(raw))>>>0;dw=true;}
+ else{const v=Math.trunc(+raw);val=v>>>0;dw=v>0xFFFF;}   // negatives Wort: Zweierkomplement via >>>0
+ const b={pnu:+document.getElementById('pnu').value,idx:+document.getElementById('idx').value,value:val,dw:dw};
+ const r=await(await fetch('/api/param',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)})).json();
+ document.getElementById('pres').textContent=r.ok?'Geschrieben (RAM). Für Persistenz: EEPROM.':`Fehler 0x${(r.err||0).toString(16)}`;}
+async function poll(){try{
+ const s=await(await fetch('/api/status')).json();
+ const st=document.getElementById('state');st.textContent=s.state;st.className='st '+s.state;
+ document.getElementById('hz').textContent=s.actual_hz.toFixed(1);
+ document.getElementById('zsw').textContent='0x'+s.zsw.toString(16).padStart(4,'0');
+ document.getElementById('alarm').textContent=s.alarm?'⚠ Warnung aktiv':'';
+ document.getElementById('comm').textContent=s.comm_ok?'':'USS: keine Antwort';
+ document.getElementById('comm').className=s.comm_ok?'':'err';
+ document.getElementById('stats').textContent=
+  `TX ${s.uss.tx} · OK ${s.uss.ok} · Timeout ${s.uss.timeout} · BCC ${s.uss.bcc} · IP ${s.ip}`;
+}catch(e){}}
+setInterval(poll,1000);poll();
+</script></body></html>)HTML";
+
+// ------------------------------------------------------------
+// Handler
+// ------------------------------------------------------------
+static void handleStatus() {
+  JsonDocument d;
+  d["state"] = driveStateName(drv->state());
+  d["mains"] = drv->mainsRelay();
+  d["running"] = drv->running();
+  d["fault"] = drv->fault();
+  d["alarm"] = drv->alarm();
+  d["comm_ok"] = drv->commOk();
+  d["actual_hz"] = drv->actualHz();
+  d["setpoint_hz"] = drv->setpointHz();
+  d["zsw"] = drv->zsw();
+  d["ip"] = wifiIp();
+  JsonObject u = d["uss"].to<JsonObject>();
+  u["tx"] = drv->ussStats().txCount;
+  u["ok"] = drv->ussStats().rxOk;
+  u["timeout"] = drv->ussStats().timeouts;
+  u["bcc"] = drv->ussStats().bccErrors;
+  String out; serializeJson(d, out);
+  server.send(200, "application/json", out);
+}
+
+static void handleCmd() {
+  JsonDocument d;
+  if (deserializeJson(d, server.arg("plain"))) {
+    server.send(400, "application/json", "{\"ok\":false}"); return;
+  }
+  const char* cmd = d["cmd"] | "";
+  bool ok = true;
+  if      (!strcmp(cmd, "mains"))    { d["on"].as<bool>() ? drv->mainsOn() : drv->mainsOff(); }
+  else if (!strcmp(cmd, "run"))      { drv->run(d["on"].as<bool>()); }
+  else if (!strcmp(cmd, "setpoint")) { drv->setSetpointHz(d["hz"].as<float>()); }
+  else if (!strcmp(cmd, "reverse"))  { drv->reverse(d["on"].as<bool>()); }
+  else if (!strcmp(cmd, "ack"))      { drv->ackFault(); }
+  else if (!strcmp(cmd, "save"))     { uint16_t e; ok = drv->saveToEeprom(e); }
+  else ok = false;
+  server.send(ok ? 200 : 400, "application/json",
+              ok ? "{\"ok\":true}" : "{\"ok\":false}");
+}
+
+static void handleParamGet() {
+  uint16_t pnu = server.arg("pnu").toInt();
+  uint8_t  idx = server.arg("idx").toInt();
+  uint32_t val; uint16_t err;
+  JsonDocument d;
+  if (drv->readParam(pnu, idx, val, err)) { d["ok"] = true; d["value"] = val; }
+  else { d["ok"] = false; d["err"] = err; }
+  String out; serializeJson(d, out);
+  server.send(200, "application/json", out);
+}
+
+static void handleParamPost() {
+  JsonDocument d;
+  if (deserializeJson(d, server.arg("plain"))) {
+    server.send(400, "application/json", "{\"ok\":false}"); return;
+  }
+  uint32_t err32; uint16_t err;
+  bool ok = drv->writeParam(d["pnu"].as<uint16_t>(), d["idx"].as<uint8_t>(),
+                            d["value"].as<uint32_t>(), d["dw"].as<bool>(), err);
+  (void)err32;
+  JsonDocument r; r["ok"] = ok; if (!ok) r["err"] = err;
+  String out; serializeJson(r, out);
+  server.send(200, "application/json", out);
+}
+
+// ------------------------------------------------------------
+void webBegin(DriveControl& drive) {
+  drv = &drive;
+
+  WiFi.mode(WIFI_STA);
+  WiFi.setHostname(HOSTNAME);
+  if (strcmp(WIFI_SSID, "CHANGE_ME") != 0) {
+    WiFi.begin(WIFI_SSID, WIFI_PASS);
+    uint32_t t0 = millis();
+    while (WiFi.status() != WL_CONNECTED &&
+           millis() - t0 < WIFI_CONNECT_TIMEOUT_MS) delay(100);
+  }
+  if (WiFi.status() != WL_CONNECTED) {
+    apMode = true;
+    WiFi.mode(WIFI_AP);
+    WiFi.softAP(AP_SSID, AP_PASS);
+  }
+
+  server.on("/", HTTP_GET, [](){ server.send_P(200, "text/html", INDEX_HTML); });
+  server.on("/api/status", HTTP_GET, handleStatus);
+  server.on("/api/cmd", HTTP_POST, handleCmd);
+  server.on("/api/param", HTTP_GET, handleParamGet);
+  server.on("/api/param", HTTP_POST, handleParamPost);
+  server.begin();
+}
+
+void webLoop() { server.handleClient(); }
