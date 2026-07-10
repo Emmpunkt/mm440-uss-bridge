@@ -304,6 +304,12 @@ static void handleConfigPost() {
   rebootAt = millis() + 500;       // nach dem Senden neu starten
 }
 
+static void handleFactoryReset() {
+  configFactoryReset();
+  server.send(200, "application/json", "{\"ok\":true}");
+  rebootAt = millis() + 500;
+}
+
 // ------------------------------------------------------------
 void webBegin(DriveControl& drive, const Config& c) {
   drv = &drive;
@@ -327,6 +333,7 @@ void webBegin(DriveControl& drive, const Config& c) {
   server.on("/api/status", HTTP_GET, handleStatus);
   server.on("/api/config", HTTP_GET, handleConfigGet);
   server.on("/api/config", HTTP_POST, handleConfigPost);
+  server.on("/api/factoryreset", HTTP_POST, handleFactoryReset);
   server.on("/api/cmd", HTTP_POST, handleCmd);
   server.on("/api/param", HTTP_GET, handleParamGet);
   server.on("/api/param", HTTP_POST, handleParamPost);
