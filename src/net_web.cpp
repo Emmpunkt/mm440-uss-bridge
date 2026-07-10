@@ -34,6 +34,7 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
  .warn{color:#e6b400} .err{color:#ff6b6b} label{font-size:.9rem;color:#aaa}
 </style></head><body>
 <h1>MM440 USS Bridge</h1>
+<div style="text-align:right"><a href="/settings" style="color:#2d6cdf">&#9881; Einstellungen</a></div>
 
 <div class="card">
  <div class="row"><span>Zustand</span><span id="state" class="st">–</span></div>
@@ -108,6 +109,63 @@ async function poll(){try{
   `TX ${s.uss.tx} · OK ${s.uss.ok} · Timeout ${s.uss.timeout} · BCC ${s.uss.bcc} · IP ${s.ip}`;
 }catch(e){}}
 setInterval(poll,1000);poll();
+</script></body></html>)HTML";
+
+static const char SETTINGS_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MM440 Einstellungen</title>
+<style>
+ body{font-family:system-ui,sans-serif;background:#111;color:#eee;margin:0;padding:1rem;max-width:640px;margin-inline:auto}
+ h1{font-size:1.2rem} .card{background:#1c1c1e;border-radius:10px;padding:1rem;margin-bottom:1rem}
+ label{display:block;font-size:.9rem;color:#aaa;margin:.5rem 0 .2rem}
+ input,select{background:#2a2a2c;color:#eee;border:1px solid #444;border-radius:6px;padding:.5rem;width:100%;box-sizing:border-box}
+ button{background:#2d6cdf;color:#fff;border:0;border-radius:8px;padding:.6rem 1rem;font-size:1rem;cursor:pointer;margin-top:1rem}
+ button.red{background:#c0392b} a{color:#2d6cdf} .msg{margin-top:.6rem}
+</style></head><body>
+<h1>MM440 Einstellungen</h1><a href="/">&larr; zur&uuml;ck</a>
+<div class="card"><b>Ger&auml;t</b>
+ <label>Name (HA-Anzeigename)</label><input id="deviceName"></div>
+<div class="card"><b>WLAN</b>
+ <label>SSID</label><input id="wifiSsid">
+ <label>Passwort <span id="wifiPassHint" style="color:#888"></span></label>
+ <input id="wifiPass" type="password" placeholder="leer = unver&auml;ndert"></div>
+<div class="card"><b>MQTT</b> (Host leer = deaktiviert)
+ <label>Host</label><input id="mqttHost">
+ <label>Port</label><input id="mqttPort" type="number">
+ <label>Benutzer</label><input id="mqttUser">
+ <label>Passwort <span id="mqttPassHint" style="color:#888"></span></label>
+ <input id="mqttPass" type="password" placeholder="leer = unver&auml;ndert"></div>
+<div class="card"><b>USS / Antrieb</b>
+ <label>Baud</label><select id="ussBaud">
+  <option>9600</option><option>19200</option><option>38400</option>
+  <option>57600</option><option>115200</option></select>
+ <label>USS-Adresse (0-31)</label><input id="ussSlaveAddr" type="number">
+ <label>Bezugsfrequenz P2000 (Hz)</label><input id="refFreqHz" type="number" step="0.1">
+ <label>Sollwert min (Hz)</label><input id="setpointMinHz" type="number" step="0.1">
+ <label>Sollwert max (Hz)</label><input id="setpointMaxHz" type="number" step="0.1"></div>
+<button onclick="save()">Speichern &amp; Neustart</button>
+<button class="red" onclick="freset()" style="float:right">Werkseinstellungen</button>
+<div id="msg" class="msg"></div>
+<script>
+const F=['deviceName','wifiSsid','mqttHost','mqttPort','mqttUser','ussBaud','ussSlaveAddr','refFreqHz','setpointMinHz','setpointMaxHz'];
+async function load(){const c=await(await fetch('/api/config')).json();
+ for(const k of F){const e=document.getElementById(k);if(e)e.value=c[k];}
+ document.getElementById('wifiPassHint').textContent=c.wifiPassSet?'(gesetzt)':'';
+ document.getElementById('mqttPassHint').textContent=c.mqttPassSet?'(gesetzt)':'';}
+async function save(){const b={};
+ for(const k of F){const e=document.getElementById(k);if(e)b[k]=e.value;}
+ b.mqttPort=+b.mqttPort;b.ussBaud=+b.ussBaud;b.ussSlaveAddr=+b.ussSlaveAddr;
+ b.refFreqHz=+b.refFreqHz;b.setpointMinHz=+b.setpointMinHz;b.setpointMaxHz=+b.setpointMaxHz;
+ const wp=document.getElementById('wifiPass').value;if(wp)b.wifiPass=wp;
+ const mp=document.getElementById('mqttPass').value;if(mp)b.mqttPass=mp;
+ const r=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+ const j=await r.json();
+ document.getElementById('msg').textContent=j.ok?'Gespeichert. Neustart läuft …':('Fehler: '+(j.err||r.status));}
+async function freset(){if(!confirm('Wirklich auf Werkseinstellungen zurücksetzen?'))return;
+ await fetch('/api/factoryreset',{method:'POST'});
+ document.getElementById('msg').textContent='Zurückgesetzt. Neustart (AP-Modus) …';}
+load();
 </script></body></html>)HTML";
 
 // ------------------------------------------------------------
@@ -265,6 +323,7 @@ void webBegin(DriveControl& drive, const Config& c) {
   }
 
   server.on("/", HTTP_GET, [](){ server.send_P(200, "text/html", INDEX_HTML); });
+  server.on("/settings", HTTP_GET, [](){ server.send_P(200, "text/html", SETTINGS_HTML); });
   server.on("/api/status", HTTP_GET, handleStatus);
   server.on("/api/config", HTTP_GET, handleConfigGet);
   server.on("/api/config", HTTP_POST, handleConfigPost);
