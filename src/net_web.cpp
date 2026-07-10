@@ -3,6 +3,7 @@
 #include <ArduinoJson.h>
 #include "net_web.h"
 #include "config.h"
+#include "config_store.h"
 #include "mm440.h"
 
 static WebServer server(80);
@@ -175,6 +176,27 @@ static void handleParamPost() {
   server.send(200, "application/json", out);
 }
 
+static void handleConfigGet() {
+  const Config& c = configGet();
+  JsonDocument d;
+  d["deviceName"]   = c.deviceName;
+  d["wifiSsid"]     = c.wifiSsid;
+  d["wifiPassSet"]  = strlen(c.wifiPass) > 0;
+  d["mqttHost"]     = c.mqttHost;
+  d["mqttPort"]     = c.mqttPort;
+  d["mqttUser"]     = c.mqttUser;
+  d["mqttPassSet"]  = strlen(c.mqttPass) > 0;
+  d["ussBaud"]      = c.ussBaud;
+  d["ussSlaveAddr"] = c.ussSlaveAddr;
+  d["refFreqHz"]    = c.refFreqHz;
+  d["setpointMinHz"]= c.setpointMinHz;
+  d["setpointMaxHz"]= c.setpointMaxHz;
+  d["hostname"]     = configHostname();
+  d["mqttBase"]     = configMqttBase();
+  String out; serializeJson(d, out);
+  server.send(200, "application/json", out);
+}
+
 // ------------------------------------------------------------
 void webBegin(DriveControl& drive) {
   drv = &drive;
@@ -195,6 +217,7 @@ void webBegin(DriveControl& drive) {
 
   server.on("/", HTTP_GET, [](){ server.send_P(200, "text/html", INDEX_HTML); });
   server.on("/api/status", HTTP_GET, handleStatus);
+  server.on("/api/config", HTTP_GET, handleConfigGet);
   server.on("/api/cmd", HTTP_POST, handleCmd);
   server.on("/api/param", HTTP_GET, handleParamGet);
   server.on("/api/param", HTTP_POST, handleParamPost);
