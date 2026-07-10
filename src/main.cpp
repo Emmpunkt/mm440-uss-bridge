@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "config.h"
+#include "config_store.h"
 #include "drive_control.h"
 #include "net_web.h"
 #include "net_mqtt.h"
@@ -17,6 +18,7 @@ void setup() {
   delay(200);
   Serial.println("\nMM440 USS Bridge");
 
+  configLoad();                      // NVS -> Config, vor drive/web/mqtt
   drive.begin();
   webBegin(drive);
   mqttBegin(drive);
