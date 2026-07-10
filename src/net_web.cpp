@@ -9,6 +9,7 @@
 static WebServer server(80);
 static DriveControl* drv = nullptr;
 static bool apMode = false;
+static uint32_t rebootAt = 0;   // 0 = kein Reboot geplant
 
 bool wifiIsAp() { return apMode; }
 String wifiIp() { return apMode ? WiFi.softAPIP().toString() : WiFi.localIP().toString(); }
@@ -197,6 +198,54 @@ static void handleConfigGet() {
   server.send(200, "application/json", out);
 }
 
+static void handleConfigPost() {
+  JsonDocument d;
+  if (deserializeJson(d, server.arg("plain"))) {
+    server.send(400, "application/json", "{\"ok\":false,\"err\":\"JSON\"}"); return;
+  }
+  Config c = configGet();          // Basis: aktuelle Werte (für write-only Passwörter)
+
+  auto setStr = [](char* dst, size_t n, JsonVariant v) {
+    if (!v.isNull()) { strncpy(dst, v.as<const char*>(), n - 1); dst[n - 1] = '\0'; }
+  };
+  setStr(c.deviceName, sizeof(c.deviceName), d["deviceName"]);
+  setStr(c.wifiSsid,   sizeof(c.wifiSsid),   d["wifiSsid"]);
+  setStr(c.mqttHost,   sizeof(c.mqttHost),   d["mqttHost"]);
+  setStr(c.mqttUser,   sizeof(c.mqttUser),   d["mqttUser"]);
+  // Passwörter write-only: nur übernehmen wenn nicht-leer gesendet
+  if (!d["wifiPass"].isNull() && strlen(d["wifiPass"]) > 0)
+    setStr(c.wifiPass, sizeof(c.wifiPass), d["wifiPass"]);
+  if (!d["mqttPass"].isNull() && strlen(d["mqttPass"]) > 0)
+    setStr(c.mqttPass, sizeof(c.mqttPass), d["mqttPass"]);
+  if (!d["mqttPort"].isNull())      c.mqttPort      = d["mqttPort"].as<uint16_t>();
+  if (!d["ussBaud"].isNull())       c.ussBaud       = d["ussBaud"].as<uint32_t>();
+  if (!d["ussSlaveAddr"].isNull())  c.ussSlaveAddr  = d["ussSlaveAddr"].as<uint8_t>();
+  if (!d["refFreqHz"].isNull())     c.refFreqHz     = d["refFreqHz"].as<float>();
+  if (!d["setpointMinHz"].isNull()) c.setpointMinHz = d["setpointMinHz"].as<float>();
+  if (!d["setpointMaxHz"].isNull()) c.setpointMaxHz = d["setpointMaxHz"].as<float>();
+
+  // Validierung
+  const char* err = nullptr;
+  if (strlen(c.deviceName) == 0) err = "Name leer";
+  else if (strlen(c.mqttHost) > 0 && c.mqttPort < 1) err = "Port ungueltig";
+  else if (!(c.ussBaud == 9600 || c.ussBaud == 19200 || c.ussBaud == 38400 ||
+             c.ussBaud == 57600 || c.ussBaud == 115200)) err = "Baud ungueltig";
+  else if (c.ussSlaveAddr > 31) err = "Adresse 0-31";
+  else if (!(c.refFreqHz > 0 && c.refFreqHz <= 650)) err = "Bezugsfreq ungueltig";
+  else if (!(c.setpointMinHz >= 0 && c.setpointMaxHz > c.setpointMinHz &&
+             c.setpointMaxHz <= 650)) err = "Sollwertgrenzen ungueltig";
+  if (err) {
+    JsonDocument r; r["ok"] = false; r["err"] = err;
+    String out; serializeJson(r, out);
+    server.send(400, "application/json", out); return;
+  }
+  if (!configSave(c)) {
+    server.send(500, "application/json", "{\"ok\":false,\"err\":\"NVS\"}"); return;
+  }
+  server.send(200, "application/json", "{\"ok\":true}");
+  rebootAt = millis() + 500;       // nach dem Senden neu starten
+}
+
 // ------------------------------------------------------------
 void webBegin(DriveControl& drive, const Config& c) {
   drv = &drive;
@@ -218,10 +267,14 @@ void webBegin(DriveControl& drive, const Config& c) {
   server.on("/", HTTP_GET, [](){ server.send_P(200, "text/html", INDEX_HTML); });
   server.on("/api/status", HTTP_GET, handleStatus);
   server.on("/api/config", HTTP_GET, handleConfigGet);
+  server.on("/api/config", HTTP_POST, handleConfigPost);
   server.on("/api/cmd", HTTP_POST, handleCmd);
   server.on("/api/param", HTTP_GET, handleParamGet);
   server.on("/api/param", HTTP_POST, handleParamPost);
   server.begin();
 }
 
-void webLoop() { server.handleClient(); }
+void webLoop() {
+  server.handleClient();
+  if (rebootAt && millis() > rebootAt) { delay(50); ESP.restart(); }
+}
