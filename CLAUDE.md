@@ -100,20 +100,31 @@ Vor dem ersten Flash: `include/config.h` → WLAN-Zugangsdaten, ggf. MQTT_HOST.
 
 ## Offene Punkte / TODO für Claude Code
 
-- [ ] **Verifizieren gegen USS-Spez/MM4-Handbuch:** PNU≥2000-Adressierung
-      (Seitenbit 0x80 im IND-Lowbyte) und Response-AK-Zuordnung 4/5 für
-      Array-Antworten. Implementierung in `uss_master.cpp::pkwRequest`.
+- [x] **Verifiziert + gefixt (2026-07-10):** PNU≥2000-Adressierung — Seitenbit
+      ist **Bit 15 (0x8000)** im IND, Array-Index in IND-Bits 0..7 (Siemens
+      USS-Doku, am lebenden MM440 bestätigt). Response-AK 4/5 korrekt.
 - [ ] Störnummer r0947[0] und Warnnummer r2110[0] zyklisch bei FAULT/ALARM
       lesen und in Status/HA anzeigen (Klartext-Mapping F0001…).
 - [ ] Weitere Istwerte via PKW-Polling (r0027 Strom, r0026 Zwischenkreis)
       als HA-Sensoren — mit niedriger Rate (z. B. 2 s), PZD hat Vorrang.
 - [ ] OTA-Updates (ArduinoOTA oder ElegantOTA).
-- [ ] Konfiguration (WLAN/MQTT/Baud) nach NVS (`Preferences`) + Setup-Seite
-      statt Kompilierzeit-Konstanten.
+- [x] **Erledigt (2026-07-11):** Konfiguration (WLAN/MQTT/USS/Gerätename) nach
+      NVS (`config_store`) + Settings-Seite `/settings`. Speichern → Reboot.
+      config.h nur noch Factory-Defaults.
 - [ ] Optional: Watchdog — bei COMM_LOST im Zustand RUNNING definiertes
       Verhalten festlegen (Relais halten vs. abschalten — Anwendungsfrage!).
 - [ ] Webinterface: Basic-Auth oder zumindest Hinweis, dass das Interface
       offen im LAN steht.
+
+## Stand 2026-07-11: USS verifiziert + Runtime-Konfiguration
+
+USS/PKW am lebenden MM440 verifiziert (READY, ZSW plausibel, Sollwert→Ist
+5 Hz). PKW-Fix PNU≥2000 (0x8000-Seitenbit). Web-UI: Float-Typumschalter beim
+Parameter-Schreiben. Neu: `config_store` (NVS) + Settings-Seite `/settings` —
+WLAN/MQTT/USS/Gerätename zur Laufzeit änderbar (Speichern → Reboot);
+Gerätename steuert HA-Anzeigename + abgeleiteten Hostname/MQTT-Topic.
+HA-Discovery folgt dem Namen. `config.h` in `.gitignore` (nur Defaults),
+Vorlage `config.example.h`. Git-Repo initialisiert.
 
 ## Sicherheit (nicht wegoptimieren!)
 
