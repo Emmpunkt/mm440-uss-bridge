@@ -19,11 +19,14 @@ void DriveControl::relayWrite(bool on) {
   digitalWrite(PIN_RELAY, (on == RELAY_ACTIVE_HIGH) ? HIGH : LOW);
 }
 
-void DriveControl::begin() {
+void DriveControl::begin(const Config& c) {
   pinMode(PIN_RELAY, OUTPUT);
   relayWrite(false);
-  _uss.begin(Serial1, USS_BAUD, PIN_RS485_TX, PIN_RS485_RX,
-             PIN_RS485_DE, USS_SLAVE_ADDR);
+  _refFreqHz     = c.refFreqHz;
+  _setpointMinHz = c.setpointMinHz;
+  _setpointMaxHz = c.setpointMaxHz;
+  _uss.begin(Serial1, c.ussBaud, PIN_RS485_TX, PIN_RS485_RX,
+             PIN_RS485_DE, c.ussSlaveAddr);
   _uss.setControl(STW::READY, 0);
 }
 
@@ -32,7 +35,7 @@ bool DriveControl::fault()   const { return _uss.zsw() & ZSW::FAULT; }
 bool DriveControl::alarm()   const { return _uss.zsw() & ZSW::ALARM; }
 
 float DriveControl::actualHz() const {
-  return (float)_uss.hiw() * MM440_REF_FREQ_HZ / (float)USS_FULLSCALE;
+  return (float)_uss.hiw() * _refFreqHz / (float)USS_FULLSCALE;
 }
 
 void DriveControl::mainsOn() {
@@ -63,7 +66,7 @@ void DriveControl::run(bool on) {
 }
 
 void DriveControl::setSetpointHz(float hz) {
-  _setpointHz = constrain(hz, SETPOINT_MIN_HZ, SETPOINT_MAX_HZ);
+  _setpointHz = constrain(hz, _setpointMinHz, _setpointMaxHz);
   applyControlWord();
 }
 
@@ -81,7 +84,7 @@ void DriveControl::applyControlWord() {
   uint16_t stw = _runRequest ? STW::RUN : STW::READY;
   if (_reverse) stw |= STW::REVERSE;
   if (_ackCycles) stw |= STW::ACK_FAULT;
-  int16_t hsw = (int16_t)lroundf(_setpointHz / MM440_REF_FREQ_HZ * USS_FULLSCALE);
+  int16_t hsw = (int16_t)lroundf(_setpointHz / _refFreqHz * USS_FULLSCALE);
   _uss.setControl(stw, hsw);
 }
 

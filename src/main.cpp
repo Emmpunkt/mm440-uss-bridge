@@ -19,7 +19,7 @@ void setup() {
   Serial.println("\nMM440 USS Bridge");
 
   configLoad();                      // NVS -> Config, vor drive/web/mqtt
-  drive.begin();
+  drive.begin(configGet());
   webBegin(drive);
   mqttBegin(drive);
 

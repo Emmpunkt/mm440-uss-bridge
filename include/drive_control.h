@@ -1,6 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #include "uss_master.h"
+#include "config_store.h"
 
 // ============================================================
 //  Zustandsmaschine: Netzschütz (Relais) + USS + Betriebslogik
@@ -19,7 +20,7 @@ const char* driveStateName(DriveState s);
 
 class DriveControl {
 public:
-  void begin();
+  void begin(const Config& c);
   void loop();                       // zyklisch aus main-loop aufrufen
 
   // Befehle
@@ -58,6 +59,9 @@ private:
   bool _runRequest = false;
   bool _reverse = false;
   float _setpointHz = 0.0f;
+  float _refFreqHz = 50.0f;
+  float _setpointMinHz = 0.0f;
+  float _setpointMaxHz = 50.0f;
   uint8_t _ackCycles = 0;            // Quittier-Flanke über n Zyklen
   uint32_t _bootStart = 0;
   uint32_t _lastPoll = 0;
