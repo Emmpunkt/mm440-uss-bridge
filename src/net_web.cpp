@@ -198,13 +198,13 @@ static void handleConfigGet() {
 }
 
 // ------------------------------------------------------------
-void webBegin(DriveControl& drive) {
+void webBegin(DriveControl& drive, const Config& c) {
   drv = &drive;
 
   WiFi.mode(WIFI_STA);
-  WiFi.setHostname(HOSTNAME);
-  if (strcmp(WIFI_SSID, "CHANGE_ME") != 0) {
-    WiFi.begin(WIFI_SSID, WIFI_PASS);
+  WiFi.setHostname(configHostname().c_str());
+  if (strlen(c.wifiSsid) > 0 && strcmp(c.wifiSsid, "CHANGE_ME") != 0) {
+    WiFi.begin(c.wifiSsid, c.wifiPass);
     uint32_t t0 = millis();
     while (WiFi.status() != WL_CONNECTED &&
            millis() - t0 < WIFI_CONNECT_TIMEOUT_MS) delay(100);

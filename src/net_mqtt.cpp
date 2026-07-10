@@ -12,8 +12,12 @@ static uint32_t lastState = 0;
 static uint32_t lastReconnect = 0;
 static char devId[16];
 
+static char mqttHost[64]; static uint16_t mqttPort;
+static char mqttUser[33]; static char mqttPass[64];
+static String baseTopic; static String haName;
+
 static String topic(const char* sub) {
-  return String(MQTT_BASE) + "/" + sub;
+  return baseTopic + "/" + sub;
 }
 
 // ------------------------------------------------------------
@@ -22,7 +26,7 @@ static String topic(const char* sub) {
 static void addDevice(JsonDocument& d) {
   JsonObject dev = d["device"].to<JsonObject>();
   dev["identifiers"][0] = devId;
-  dev["name"] = HA_DEVICE_NAME;
+  dev["name"] = haName.c_str();
   dev["manufacturer"] = "Siemens/DIY";
   dev["model"] = "MM440 USS Bridge (ESP32-C3)";
 }
@@ -136,7 +140,7 @@ static void onMessage(char* t, byte* payload, unsigned int len) {
 
 static void connect() {
   String will = topic("availability");
-  if (mqtt.connect(devId, MQTT_USER, MQTT_PASSWORD,
+  if (mqtt.connect(devId, mqttUser, mqttPass,
                    will.c_str(), 0, true, "offline")) {
     mqtt.publish(will.c_str(), "online", true);
     mqtt.subscribe(topic("cmd/#").c_str());
@@ -145,13 +149,19 @@ static void connect() {
   }
 }
 
-void mqttBegin(DriveControl& drive) {
+void mqttBegin(DriveControl& drive, const Config& c) {
   drv = &drive;
-  if (strlen(MQTT_HOST) == 0) { enabled = false; return; }
+  if (strlen(c.mqttHost) == 0) { enabled = false; return; }
   enabled = true;
+  strncpy(mqttHost, c.mqttHost, sizeof(mqttHost) - 1); mqttHost[sizeof(mqttHost)-1] = '\0';
+  strncpy(mqttUser, c.mqttUser, sizeof(mqttUser) - 1); mqttUser[sizeof(mqttUser)-1] = '\0';
+  strncpy(mqttPass, c.mqttPass, sizeof(mqttPass) - 1); mqttPass[sizeof(mqttPass)-1] = '\0';
+  mqttPort  = c.mqttPort;
+  baseTopic = configMqttBase();
+  haName    = c.deviceName;
   snprintf(devId, sizeof(devId), "mm440_%06lx",
            (unsigned long)(ESP.getEfuseMac() & 0xFFFFFF));
-  mqtt.setServer(MQTT_HOST, MQTT_PORT);
+  mqtt.setServer(mqttHost, mqttPort);
   mqtt.setBufferSize(1024);          // Discovery-Payloads > 256 Byte
   mqtt.setCallback(onMessage);
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include "drive_control.h"
+#include "config_store.h"
 
 // Startet WLAN (STA, Fallback AP) und den Webserver auf Port 80.
 // REST-API:
@@ -12,7 +13,7 @@
 //                    {"cmd":"save"}          (P0971=1, RAM->EEPROM)
 //   GET  /api/param?pnu=2010&idx=0          -> Parameter lesen
 //   POST /api/param  {"pnu":1120,"idx":0,"value":10,"dw":false}
-void webBegin(DriveControl& drive);
+void webBegin(DriveControl& drive, const Config& c);
 void webLoop();
 bool wifiIsAp();
 String wifiIp();

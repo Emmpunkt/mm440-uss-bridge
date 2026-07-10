@@ -20,8 +20,8 @@ void setup() {
 
   configLoad();                      // NVS -> Config, vor drive/web/mqtt
   drive.begin(configGet());
-  webBegin(drive);
-  mqttBegin(drive);
+  webBegin(drive, configGet());
+  mqttBegin(drive, configGet());
 
   Serial.printf("Web: http://%s  (%s)\n", wifiIp().c_str(),
                 wifiIsAp() ? "AP-Modus" : "STA");

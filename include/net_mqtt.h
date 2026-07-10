@@ -1,5 +1,6 @@
 #pragma once
 #include "drive_control.h"
+#include "config_store.h"
 
 // MQTT-Anbindung mit Home-Assistant-Discovery.
 // Deaktiviert sich selbst, wenn MQTT_HOST leer ist — die Bridge
@@ -12,5 +13,5 @@
 //   mm440/cmd/run                 ON/OFF   -> Motor
 //   mm440/cmd/setpoint            Float Hz
 //   mm440/cmd/ack                 beliebige Payload -> Störung quittieren
-void mqttBegin(DriveControl& drive);
+void mqttBegin(DriveControl& drive, const Config& c);
 void mqttLoop();
