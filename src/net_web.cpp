@@ -5,6 +5,7 @@
 #include "config.h"
 #include "config_store.h"
 #include "mm440.h"
+#include "mm440_faults.h"
 
 static WebServer server(80);
 static DriveControl* drv = nullptr;
@@ -182,6 +183,13 @@ static void handleStatus() {
   d["actual_hz"] = drv->actualHz();
   d["setpoint_hz"] = drv->setpointHz();
   d["zsw"] = drv->zsw();
+  d["current_a"] = drv->currentA();
+  d["dclink_v"]  = drv->dcLinkV();
+  d["outvolt_v"] = drv->outVoltV();
+  d["fault_num"] = drv->faultNum();
+  d["warn_num"]  = drv->warnNum();
+  d["fault_text"] = drv->fault() ? faultLabel(drv->faultNum()) : String("");
+  d["warn_text"]  = drv->alarm() ? warnLabel(drv->warnNum())  : String("");
   d["ip"] = wifiIp();
   JsonObject u = d["uss"].to<JsonObject>();
   u["tx"] = drv->ussStats().txCount;
