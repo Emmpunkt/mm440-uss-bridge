@@ -103,10 +103,12 @@ Vor dem ersten Flash: `include/config.h` → WLAN-Zugangsdaten, ggf. MQTT_HOST.
 - [x] **Verifiziert + gefixt (2026-07-10):** PNU≥2000-Adressierung — Seitenbit
       ist **Bit 15 (0x8000)** im IND, Array-Index in IND-Bits 0..7 (Siemens
       USS-Doku, am lebenden MM440 bestätigt). Response-AK 4/5 korrekt.
-- [ ] Störnummer r0947[0] und Warnnummer r2110[0] zyklisch bei FAULT/ALARM
-      lesen und in Status/HA anzeigen (Klartext-Mapping F0001…).
-- [ ] Weitere Istwerte via PKW-Polling (r0027 Strom, r0026 Zwischenkreis)
-      als HA-Sensoren — mit niedriger Rate (z. B. 2 s), PZD hat Vorrang.
+- [x] **Erledigt (2026-07-11):** Störnummer r0947[0]/Warnnummer r2110[0] bei
+      FAULT/ALARM lesen + Klartext (kuratierte Tabelle `mm440_faults`), in
+      Status/HA. Warnung-Entität ergänzt.
+- [x] **Erledigt (2026-07-11):** Istwerte via PKW-Round-Robin (r0027 Strom,
+      r0026 Zwischenkreis, r0025 Ausgangsspannung) als HA-Sensoren + Web.
+      PKW trägt PZD → keine Regelratenkosten.
 - [ ] OTA-Updates (ArduinoOTA oder ElegantOTA).
 - [x] **Erledigt (2026-07-11):** Konfiguration (WLAN/MQTT/USS/Gerätename) nach
       NVS (`config_store`) + Settings-Seite `/settings`. Speichern → Reboot.
@@ -125,6 +127,16 @@ WLAN/MQTT/USS/Gerätename zur Laufzeit änderbar (Speichern → Reboot);
 Gerätename steuert HA-Anzeigename + abgeleiteten Hostname/MQTT-Topic.
 HA-Discovery folgt dem Namen. `config.h` in `.gitignore` (nur Defaults),
 Vorlage `config.example.h`. Git-Repo initialisiert.
+
+## Stand 2026-07-11 (b): Reichere & synchrone Zustände
+
+Web↔HA-Sync gefixt (Web-`poll()` schrieb Sollwert nicht zurück — war kein
+MQTT-Problem). HA-Warnung-Entität ergänzt. Stör-/Warncodes als Klartext
+(`mm440_faults`, kuratierte Tabelle + Fallback). Neue Messwerte via
+PKW-Round-Robin-Poller in `DriveControl` (r0027 Strom, r0026 Zwischenkreis,
+r0025 Ausgangsspannung) → HA-Sensoren + Web. Am Antrieb verifiziert
+(Zwischenkreis ~327 V, Warnung A0922 „Keine Last am Umrichter" im Leerlauf-Lauf).
+Branch `feature/status-enrichment` (stapelt auf `feature/runtime-config`).
 
 ## Sicherheit (nicht wegoptimieren!)
 
