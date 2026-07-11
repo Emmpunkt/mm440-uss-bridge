@@ -3,6 +3,7 @@
 #include <ArduinoJson.h>
 #include "net_mqtt.h"
 #include "config.h"
+#include "mm440_faults.h"
 
 static WiFiClient wifiClient;
 static PubSubClient mqtt(wifiClient);
@@ -109,6 +110,73 @@ static void publishDiscovery() {
     d["availability_topic"] = topic("availability");
     pub("button", "ack", d);
   }
+  // Warnung (binary)
+  {
+    JsonDocument d; addDevice(d);
+    d["name"] = "Warnung";
+    d["unique_id"] = String(devId) + "_warn";
+    d["state_topic"] = topic("state");
+    d["value_template"] = "{{ 'ON' if value_json.alarm else 'OFF' }}";
+    d["device_class"] = "problem";
+    d["availability_topic"] = topic("availability");
+    pub("binary_sensor", "warn", d);
+  }
+  // Motorstrom
+  {
+    JsonDocument d; addDevice(d);
+    d["name"] = "Motorstrom";
+    d["unique_id"] = String(devId) + "_curr";
+    d["state_topic"] = topic("state");
+    d["value_template"] = "{{ value_json.current_a | round(2) }}";
+    d["unit_of_measurement"] = "A";
+    d["device_class"] = "current"; d["state_class"] = "measurement";
+    d["availability_topic"] = topic("availability");
+    pub("sensor", "curr", d);
+  }
+  // Zwischenkreisspannung
+  {
+    JsonDocument d; addDevice(d);
+    d["name"] = "Zwischenkreisspannung";
+    d["unique_id"] = String(devId) + "_dclink";
+    d["state_topic"] = topic("state");
+    d["value_template"] = "{{ value_json.dclink_v | round(0) }}";
+    d["unit_of_measurement"] = "V";
+    d["device_class"] = "voltage"; d["state_class"] = "measurement";
+    d["availability_topic"] = topic("availability");
+    pub("sensor", "dclink", d);
+  }
+  // Ausgangsspannung
+  {
+    JsonDocument d; addDevice(d);
+    d["name"] = "Ausgangsspannung";
+    d["unique_id"] = String(devId) + "_uout";
+    d["state_topic"] = topic("state");
+    d["value_template"] = "{{ value_json.outvolt_v | round(0) }}";
+    d["unit_of_measurement"] = "V";
+    d["device_class"] = "voltage"; d["state_class"] = "measurement";
+    d["availability_topic"] = topic("availability");
+    pub("sensor", "uout", d);
+  }
+  // Störungstext
+  {
+    JsonDocument d; addDevice(d);
+    d["name"] = "Störungstext";
+    d["unique_id"] = String(devId) + "_ftext";
+    d["state_topic"] = topic("state");
+    d["value_template"] = "{{ value_json.fault_text }}";
+    d["availability_topic"] = topic("availability");
+    pub("sensor", "ftext", d);
+  }
+  // Warnungstext
+  {
+    JsonDocument d; addDevice(d);
+    d["name"] = "Warnungstext";
+    d["unique_id"] = String(devId) + "_wtext";
+    d["state_topic"] = topic("state");
+    d["value_template"] = "{{ value_json.warn_text }}";
+    d["availability_topic"] = topic("availability");
+    pub("sensor", "wtext", d);
+  }
 }
 
 static void publishState() {
@@ -122,6 +190,11 @@ static void publishState() {
   d["actual_hz"] = drv->actualHz();
   d["setpoint_hz"] = drv->setpointHz();
   d["zsw"] = drv->zsw();
+  d["current_a"] = drv->currentA();
+  d["dclink_v"]  = drv->dcLinkV();
+  d["outvolt_v"] = drv->outVoltV();
+  d["fault_text"] = drv->fault() ? faultLabel(drv->faultNum()) : String("");
+  d["warn_text"]  = drv->alarm() ? warnLabel(drv->warnNum())  : String("");
   String out; serializeJson(d, out);
   mqtt.publish(topic("state").c_str(), out.c_str(), true);
 }
