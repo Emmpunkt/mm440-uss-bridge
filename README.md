@@ -40,6 +40,9 @@ parameters (PKW channel), and exposes everything through:
 - Runtime configuration stored in NVS with a **`/settings` page** — WLAN, MQTT,
   USS baud/address, reference frequency, setpoint limits and device name are
   changeable without reflashing (save → reboot).
+- **Bilingual (German / English)**: instant `DE | EN` toggle in the web UI
+  (per browser); a device language on `/settings` also drives the MQTT / Home
+  Assistant entity names and fault/warning texts.
 - Cache-safe web pages (`Cache-Control: no-store`).
 
 ### Hardware
@@ -145,6 +148,9 @@ Antriebsparameter (PKW-Kanal) und stellt alles bereit über:
 - Laufzeit-Konfiguration im NVS mit **`/settings`-Seite** — WLAN, MQTT,
   USS-Baud/-Adresse, Bezugsfrequenz, Sollwertgrenzen und Gerätename ohne
   Neuflashen änderbar (Speichern → Neustart).
+- **Zweisprachig (Deutsch / Englisch)**: Sofort-Umschalter `DE | EN` im Web-UI
+  (pro Browser); eine Gerätesprache auf `/settings` steuert zusätzlich die
+  MQTT-/Home-Assistant-Entitätsnamen und Stör-/Warntexte.
 - Cache-sichere Seiten (`Cache-Control: no-store`).
 
 ### Hardware

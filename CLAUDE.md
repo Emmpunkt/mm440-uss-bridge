@@ -138,6 +138,16 @@ r0025 Ausgangsspannung) → HA-Sensoren + Web. Am Antrieb verifiziert
 (Zwischenkreis ~327 V, Warnung A0922 „Keine Last am Umrichter" im Leerlauf-Lauf).
 Branch `feature/status-enrichment` (stapelt auf `feature/runtime-config`).
 
+## Stand 2026-07-11 (c): Zweisprachig DE/EN
+
+Gesamtes System DE/EN. Web-UI: Sofort-Umschalter „DE | EN" (pro Browser,
+`localStorage`), alle Labels via `data-i18n` + JS-Wörterbuch, Stör-/Warntexte
+im Web über JS-Codetabelle. Gerätesprache `language` in Config (`/settings`-
+Dropdown) steuert MQTT/HA-Entitätsnamen + -Texte und den Web-Standard;
+`mm440_faults` zweisprachig. Schonende NVS-Migration (bestehende Config bleibt
+erhalten, `language` default „de"). Am Antrieb + HA verifiziert (EN-Entitäten,
+„No load on inverter"). Branch `feature/i18n`.
+
 ## Sicherheit (nicht wegoptimieren!)
 
 - `setup()` setzt Relais-Pin und DE **vor allem anderen** auf inaktiv.
