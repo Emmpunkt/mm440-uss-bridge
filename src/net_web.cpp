@@ -205,8 +205,9 @@ static void handleStatus() {
   d["outvolt_v"] = drv->outVoltV();
   d["fault_num"] = drv->faultNum();
   d["warn_num"]  = drv->warnNum();
-  d["fault_text"] = drv->fault() ? faultLabel(drv->faultNum()) : String("");
-  d["warn_text"]  = drv->alarm() ? warnLabel(drv->warnNum())  : String("");
+  bool en = strcmp(configGet().language, "en") == 0;
+  d["fault_text"] = drv->fault() ? faultLabel(drv->faultNum(), en) : String("");
+  d["warn_text"]  = drv->alarm() ? warnLabel(drv->warnNum(), en)  : String("");
   d["ip"] = wifiIp();
   JsonObject u = d["uss"].to<JsonObject>();
   u["tx"] = drv->ussStats().txCount;

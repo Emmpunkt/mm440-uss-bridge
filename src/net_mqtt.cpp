@@ -16,6 +16,8 @@ static char devId[16];
 static char mqttHost[64]; static uint16_t mqttPort;
 static char mqttUser[33]; static char mqttPass[64];
 static String baseTopic; static String haName;
+static bool langEn = false;   // Gerätesprache für Entitätsnamen/Texte
+static const char* L(const char* de, const char* en) { return langEn ? en : de; }
 
 static String topic(const char* sub) {
   return baseTopic + "/" + sub;
@@ -45,7 +47,7 @@ static void publishDiscovery() {
   // Istfrequenz
   {
     JsonDocument d; addDevice(d);
-    d["name"] = "Istfrequenz";
+    d["name"] = L("Istfrequenz","Actual frequency");
     d["unique_id"] = String(devId) + "_freq";
     d["state_topic"] = topic("state");
     d["value_template"] = "{{ value_json.actual_hz | round(1) }}";
@@ -57,7 +59,7 @@ static void publishDiscovery() {
   // Störung
   {
     JsonDocument d; addDevice(d);
-    d["name"] = "Störung";
+    d["name"] = L("Störung","Fault");
     d["unique_id"] = String(devId) + "_fault";
     d["state_topic"] = topic("state");
     d["value_template"] = "{{ 'ON' if value_json.fault else 'OFF' }}";
@@ -68,7 +70,7 @@ static void publishDiscovery() {
   // Netzschütz
   {
     JsonDocument d; addDevice(d);
-    d["name"] = "Netzschütz";
+    d["name"] = L("Netzschütz","Mains contactor");
     d["unique_id"] = String(devId) + "_mains";
     d["state_topic"] = topic("state");
     d["value_template"] = "{{ 'ON' if value_json.mains else 'OFF' }}";
@@ -79,7 +81,7 @@ static void publishDiscovery() {
   // Motor Start/Stopp
   {
     JsonDocument d; addDevice(d);
-    d["name"] = "Motor";
+    d["name"] = L("Motor","Motor");
     d["unique_id"] = String(devId) + "_run";
     d["state_topic"] = topic("state");
     d["value_template"] = "{{ 'ON' if value_json.running else 'OFF' }}";
@@ -90,7 +92,7 @@ static void publishDiscovery() {
   // Sollwert
   {
     JsonDocument d; addDevice(d);
-    d["name"] = "Sollfrequenz";
+    d["name"] = L("Sollfrequenz","Setpoint frequency");
     d["unique_id"] = String(devId) + "_setp";
     d["state_topic"] = topic("state");
     d["value_template"] = "{{ value_json.setpoint_hz }}";
@@ -104,7 +106,7 @@ static void publishDiscovery() {
   // Quittier-Button
   {
     JsonDocument d; addDevice(d);
-    d["name"] = "Störung quittieren";
+    d["name"] = L("Störung quittieren","Acknowledge fault");
     d["unique_id"] = String(devId) + "_ack";
     d["command_topic"] = topic("cmd/ack");
     d["availability_topic"] = topic("availability");
@@ -113,7 +115,7 @@ static void publishDiscovery() {
   // Warnung (binary)
   {
     JsonDocument d; addDevice(d);
-    d["name"] = "Warnung";
+    d["name"] = L("Warnung","Warning");
     d["unique_id"] = String(devId) + "_warn";
     d["state_topic"] = topic("state");
     d["value_template"] = "{{ 'ON' if value_json.alarm else 'OFF' }}";
@@ -124,7 +126,7 @@ static void publishDiscovery() {
   // Motorstrom
   {
     JsonDocument d; addDevice(d);
-    d["name"] = "Motorstrom";
+    d["name"] = L("Motorstrom","Motor current");
     d["unique_id"] = String(devId) + "_curr";
     d["state_topic"] = topic("state");
     d["value_template"] = "{{ value_json.current_a | round(2) }}";
@@ -136,7 +138,7 @@ static void publishDiscovery() {
   // Zwischenkreisspannung
   {
     JsonDocument d; addDevice(d);
-    d["name"] = "Zwischenkreisspannung";
+    d["name"] = L("Zwischenkreisspannung","DC-link voltage");
     d["unique_id"] = String(devId) + "_dclink";
     d["state_topic"] = topic("state");
     d["value_template"] = "{{ value_json.dclink_v | round(0) }}";
@@ -148,7 +150,7 @@ static void publishDiscovery() {
   // Ausgangsspannung
   {
     JsonDocument d; addDevice(d);
-    d["name"] = "Ausgangsspannung";
+    d["name"] = L("Ausgangsspannung","Output voltage");
     d["unique_id"] = String(devId) + "_uout";
     d["state_topic"] = topic("state");
     d["value_template"] = "{{ value_json.outvolt_v | round(0) }}";
@@ -160,7 +162,7 @@ static void publishDiscovery() {
   // Störungstext
   {
     JsonDocument d; addDevice(d);
-    d["name"] = "Störungstext";
+    d["name"] = L("Störungstext","Fault text");
     d["unique_id"] = String(devId) + "_ftext";
     d["state_topic"] = topic("state");
     d["value_template"] = "{{ value_json.fault_text }}";
@@ -170,7 +172,7 @@ static void publishDiscovery() {
   // Warnungstext
   {
     JsonDocument d; addDevice(d);
-    d["name"] = "Warnungstext";
+    d["name"] = L("Warnungstext","Warning text");
     d["unique_id"] = String(devId) + "_wtext";
     d["state_topic"] = topic("state");
     d["value_template"] = "{{ value_json.warn_text }}";
@@ -193,8 +195,8 @@ static void publishState() {
   d["current_a"] = drv->currentA();
   d["dclink_v"]  = drv->dcLinkV();
   d["outvolt_v"] = drv->outVoltV();
-  d["fault_text"] = drv->fault() ? faultLabel(drv->faultNum()) : String("");
-  d["warn_text"]  = drv->alarm() ? warnLabel(drv->warnNum())  : String("");
+  d["fault_text"] = drv->fault() ? faultLabel(drv->faultNum(), langEn) : String("");
+  d["warn_text"]  = drv->alarm() ? warnLabel(drv->warnNum(), langEn)  : String("");
   String out; serializeJson(d, out);
   mqtt.publish(topic("state").c_str(), out.c_str(), true);
 }
@@ -232,6 +234,7 @@ void mqttBegin(DriveControl& drive, const Config& c) {
   mqttPort  = c.mqttPort;
   baseTopic = configMqttBase();
   haName    = c.deviceName;
+  langEn    = (strcmp(c.language, "en") == 0);
   snprintf(devId, sizeof(devId), "mm440_%06lx",
            (unsigned long)(ESP.getEfuseMac() & 0xFFFFFF));
   mqtt.setServer(mqttHost, mqttPort);
