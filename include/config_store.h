@@ -18,6 +18,7 @@ struct Config {
   float    refFreqHz;
   float    setpointMinHz;
   float    setpointMaxHz;
+  char     language[3];    // "de" | "en" (Gerätesprache: MQTT + Web-Default)
 };
 
 void    configLoad();               // NVS -> globales Config; ungültig => Defaults

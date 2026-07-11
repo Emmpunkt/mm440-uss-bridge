@@ -31,17 +31,22 @@ static void fillDefaults(Config& c) {
   c.refFreqHz     = MM440_REF_FREQ_HZ;
   c.setpointMinHz = SETPOINT_MIN_HZ;
   c.setpointMaxHz = SETPOINT_MAX_HZ;
+  copyStr(c.language, sizeof(c.language), "de");
 }
 
 void configLoad() {
   Preferences p;
   p.begin(NVS_NS, true);              // read-only
   Config tmp;
+  memset(&tmp, 0, sizeof(tmp));       // ungelesene (neue) Felder = 0 -> Migration
   size_t got = p.getBytes(NVS_KEY, &tmp, sizeof(tmp));
   p.end();
-  if (got == sizeof(tmp) && tmp.magic == CONFIG_MAGIC &&
-      tmp.version == CONFIG_VERSION) {
+  // Akzeptiert auch ältere, kürzere Blobs (magic passt) -> keine Config verloren.
+  if (got > 0 && tmp.magic == CONFIG_MAGIC) {
     g_cfg = tmp;
+    if (g_cfg.language[0] != 'd' && g_cfg.language[0] != 'e')  // altes Format
+      copyStr(g_cfg.language, sizeof(g_cfg.language), "de");
+    g_cfg.version = CONFIG_VERSION;
   } else {
     fillDefaults(g_cfg);
   }

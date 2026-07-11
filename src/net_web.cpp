@@ -275,6 +275,7 @@ static void handleConfigGet() {
   d["refFreqHz"]    = c.refFreqHz;
   d["setpointMinHz"]= c.setpointMinHz;
   d["setpointMaxHz"]= c.setpointMaxHz;
+  d["language"]     = c.language;
   d["hostname"]     = configHostname();
   d["mqttBase"]     = configMqttBase();
   String out; serializeJson(d, out);
@@ -306,6 +307,11 @@ static void handleConfigPost() {
   if (!d["refFreqHz"].isNull())     c.refFreqHz     = d["refFreqHz"].as<float>();
   if (!d["setpointMinHz"].isNull()) c.setpointMinHz = d["setpointMinHz"].as<float>();
   if (!d["setpointMaxHz"].isNull()) c.setpointMaxHz = d["setpointMaxHz"].as<float>();
+  if (!d["language"].isNull()) {
+    const char* l = d["language"].as<const char*>();
+    strncpy(c.language, (l && strcmp(l, "en") == 0) ? "en" : "de", sizeof(c.language) - 1);
+    c.language[sizeof(c.language) - 1] = '\0';
+  }
 
   // Validierung
   const char* err = nullptr;
