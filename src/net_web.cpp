@@ -35,46 +35,46 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
  .warn{color:#e6b400} .err{color:#ff6b6b} label{font-size:.9rem;color:#aaa}
 </style></head><body>
 <h1>MM440 USS Bridge</h1>
-<div style="text-align:right"><a href="/settings" style="color:#2d6cdf">&#9881; Einstellungen</a></div>
+<div style="text-align:right"><a id="lang" style="color:#888;cursor:pointer;margin-right:.8rem">DE | EN</a><a href="/settings" style="color:#2d6cdf" data-i18n="settings">&#9881; Einstellungen</a></div>
 
 <div class="card">
- <div class="row"><span>Zustand</span><span id="state" class="st">–</span></div>
- <div class="row"><span>Istfrequenz</span><span class="big"><span id="hz">0.0</span> Hz</span></div>
+ <div class="row"><span data-i18n="zustand">Zustand</span><span id="state" class="st">–</span></div>
+ <div class="row"><span data-i18n="istfreq">Istfrequenz</span><span class="big"><span id="hz">0.0</span> Hz</span></div>
  <div class="row"><span>ZSW</span><code id="zsw">0x0000</code></div>
- <div class="row"><span>Motorstrom</span><span><span id="cur">0.0</span> A</span></div>
- <div class="row"><span>Zwischenkreis</span><span><span id="dc">0</span> V</span></div>
- <div class="row"><span>Ausgangsspannung</span><span><span id="uo">0</span> V</span></div>
+ <div class="row"><span data-i18n="strom">Motorstrom</span><span><span id="cur">0.0</span> A</span></div>
+ <div class="row"><span data-i18n="zk">Zwischenkreis</span><span><span id="dc">0</span> V</span></div>
+ <div class="row"><span data-i18n="uout">Ausgangsspannung</span><span><span id="uo">0</span> V</span></div>
  <div class="row"><span id="fault" class="err"></span><span id="warntxt" class="warn"></span></div>
  <div class="row"><span id="alarm" class="warn"></span><span id="comm"></span></div>
 </div>
 
 <div class="card">
- <div class="row"><span>Netzsch&uuml;tz</span>
-  <span><button id="mOn" onclick="cmd({cmd:'mains',on:true})">Ein</button>
-        <button id="mOff" class="red" onclick="cmd({cmd:'mains',on:false})">Aus</button></span></div>
- <div class="row"><span>Motor</span>
-  <span><button onclick="cmd({cmd:'run',on:true})">Start</button>
-        <button class="red" onclick="cmd({cmd:'run',on:false})">Stopp</button>
-        <button class="grey" onclick="cmd({cmd:'ack'})">Quittieren</button></span></div>
- <div class="row"><label>Sollwert: <b><span id="spv">0</span> Hz</b></label></div>
+ <div class="row"><span data-i18n="netz">Netzsch&uuml;tz</span>
+  <span><button id="mOn" data-i18n="ein" onclick="cmd({cmd:'mains',on:true})">Ein</button>
+        <button id="mOff" class="red" data-i18n="aus" onclick="cmd({cmd:'mains',on:false})">Aus</button></span></div>
+ <div class="row"><span data-i18n="motor">Motor</span>
+  <span><button data-i18n="start" onclick="cmd({cmd:'run',on:true})">Start</button>
+        <button class="red" data-i18n="stopp" onclick="cmd({cmd:'run',on:false})">Stopp</button>
+        <button class="grey" data-i18n="quit" onclick="cmd({cmd:'ack'})">Quittieren</button></span></div>
+ <div class="row"><label><span data-i18n="soll">Sollwert:</span> <b><span id="spv">0</span> Hz</b></label></div>
  <input type="range" id="sp" min="0" max="50" step="0.5" value="0"
         oninput="document.getElementById('spv').textContent=this.value"
         onchange="cmd({cmd:'setpoint',hz:parseFloat(this.value)})">
  <div class="row"><label><input type="checkbox" id="rev"
-        onchange="cmd({cmd:'reverse',on:this.checked})"> Drehrichtung umkehren</label></div>
+        onchange="cmd({cmd:'reverse',on:this.checked})"> <span data-i18n="rev">Drehrichtung umkehren</span></label></div>
 </div>
 
 <div class="card">
- <b>Parameter</b>
+ <b data-i18n="param">Parameter</b>
  <div class="row">
   <span>P<input type="number" id="pnu" value="2010" min="0" max="3999">
-   Idx <input type="number" id="idx" value="0" min="0" max="255" style="width:4rem"></span>
-  <button class="grey" onclick="pread()">Lesen</button></div>
+   <span data-i18n="idx">Idx</span> <input type="number" id="idx" value="0" min="0" max="255" style="width:4rem"></span>
+  <button class="grey" data-i18n="read" onclick="pread()">Lesen</button></div>
  <div class="row">
-  <span>Wert <input type="text" id="pval" value="0">
+  <span><span data-i18n="wert">Wert</span> <input type="text" id="pval" value="0">
    <select id="ptype" style="background:#2a2a2c;color:#eee;border:1px solid #444;border-radius:6px;padding:.4rem">
-    <option value="int">Ganzzahl</option><option value="float">Float</option></select></span>
-  <span><button onclick="pwrite()">Schreiben</button>
+    <option value="int" data-i18n="int">Ganzzahl</option><option value="float">Float</option></select></span>
+  <span><button data-i18n="write" onclick="pwrite()">Schreiben</button>
         <button class="grey" onclick="cmd({cmd:'save'})" title="P0971=1">EEPROM</button></span></div>
  <div id="pres" class="row"></div>
 </div>
@@ -88,6 +88,15 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
 
 <script>
 async function cmd(o){await fetch('/api/cmd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)});poll();}
+window.LANG='de';
+const I18N={de:{settings:"⚙ Einstellungen",zustand:"Zustand",istfreq:"Istfrequenz",strom:"Motorstrom",zk:"Zwischenkreis",uout:"Ausgangsspannung",netz:"Netzschütz",ein:"Ein",aus:"Aus",motor:"Motor",start:"Start",stopp:"Stopp",quit:"Quittieren",soll:"Sollwert:",rev:"Drehrichtung umkehren",param:"Parameter",idx:"Idx",read:"Lesen",wert:"Wert",int:"Ganzzahl",write:"Schreiben",fault:"Störung",warn:"Warnung",noreply:"USS: keine Antwort"},en:{settings:"⚙ Settings",zustand:"State",istfreq:"Actual frequency",strom:"Motor current",zk:"DC link",uout:"Output voltage",netz:"Mains contactor",ein:"On",aus:"Off",motor:"Motor",start:"Start",stopp:"Stop",quit:"Acknowledge",soll:"Setpoint:",rev:"Reverse direction",param:"Parameter",idx:"Idx",read:"Read",wert:"Value",int:"Integer",write:"Write",fault:"Fault",warn:"Warning",noreply:"USS: no reply"}};
+const FAULTS={1:["Überstrom","Overcurrent"],2:["Überspannung","Overvoltage"],3:["Unterspannung","Undervoltage"],4:["Umrichter-Übertemperatur","Inverter over-temperature"],5:["Umrichter I²t","Inverter I²t"],11:["Motor-Übertemperatur","Motor over-temperature"],12:["Umrichtertemp Signalverlust","Inverter temp signal lost"],15:["Motortemp Signalverlust","Motor temp signal lost"],20:["Netzphasenausfall","Mains phase loss"],21:["Erdschluss","Earth fault"],22:["Leistungsteil-Störung (HW)","Power stack fault (HW)"],23:["Ausgangsfehler","Output fault"],30:["Lüfter defekt","Fan failed"],35:["Auto-Wiederanlauf","Auto restart"],41:["Motordaten-Identifikation","Motor data identification"],42:["Drehzahlregler-Optimierung","Speed control optimization"],51:["Parameter-EEPROM","Parameter EEPROM"],52:["Leistungsteil (Lesefehler)","Power stack (read error)"],60:["Asic-Timeout","ASIC timeout"],70:["CB-Sollwert (Comm-Board)","CB setpoint (comm board)"],71:["USS BOP-Link Telegrammausfall","USS BOP-link telegram loss"],72:["USS COM-Link Telegrammausfall","USS COM-link telegram loss"],80:["ADC Signalverlust","ADC signal lost"],85:["Externe Störung","External fault"],101:["Stapelüberlauf","Stack overflow"],221:["PID-Rückführung < min","PID feedback < min"],222:["PID-Rückführung > max","PID feedback > max"],450:["BIST-Diagnose","BIST diagnostics"]},WARNS={501:["Strombegrenzung","Current limit"],502:["Überspannungsgrenze","Overvoltage limit"],503:["Unterspannungsgrenze","Undervoltage limit"],504:["Umrichter-Übertemperatur","Inverter over-temperature"],505:["Umrichter I²t","Inverter I²t"],506:["Umrichter-Lastspiel","Inverter duty cycle"],511:["Motor-Übertemperatur","Motor over-temperature"],512:["Motortemp Signalverlust","Motor temp signal lost"],520:["Kühlkörper-Übertemperatur","Heatsink over-temperature"],521:["Umgebungs-Übertemperatur","Ambient over-temperature"],522:["I²C Lesetimeout","I²C read timeout"],523:["Ausgangsfehler","Output fault"],541:["Motordaten-Identifikation aktiv","Motor data identification active"],542:["Drehzahlregler-Opt aktiv","Speed control opt active"],590:["Geber Signalverlust","Encoder signal lost"],600:["RTOS Overrun","RTOS overrun"],700:["CB-Warnung","CB warning"],710:["USS BOP-Link Komm-Fehler","USS BOP-link comm error"],711:["USS COM-Link Komm-Fehler","USS COM-link comm error"],910:["Vdc-max-Regler inaktiv","Vdc-max controller inactive"],911:["Vdc-max-Regler aktiv","Vdc-max controller active"],920:["ADC-Parameter falsch","ADC parameters wrong"],922:["Keine Last am Umrichter","No load on inverter"],923:["JOG links+rechts gleichzeitig","JOG left+right simultaneously"]};
+function t(k){return (I18N[window.LANG]||I18N.de)[k]||k;}
+function pad4(n){return ('000'+n).slice(-4);}
+function ftext(n){var e=FAULTS[n];return e?e[window.LANG=='en'?1:0]:(n?'F'+pad4(n):'');}
+function wtext(n){var e=WARNS[n];return e?e[window.LANG=='en'?1:0]:(n?'A'+pad4(n):'');}
+function applyLang(l){window.LANG=(l=='en'?'en':'de');localStorage.lang=window.LANG;document.documentElement.lang=window.LANG;document.querySelectorAll('[data-i18n]').forEach(function(e){e.textContent=t(e.dataset.i18n);});}
+
 // Rohbits <-> Float (IEEE754, 32 Bit) — MM4-Float-Parameter sind immer Doppelwort
 function bitsToFloat(u){const b=new ArrayBuffer(4),v=new DataView(b);v.setUint32(0,u>>>0);return v.getFloat32(0);}
 function floatToBits(f){const b=new ArrayBuffer(4),v=new DataView(b);v.setFloat32(0,f);return v.getUint32(0);}
@@ -116,16 +125,18 @@ async function poll(){try{
  document.getElementById('cur').textContent=(s.current_a||0).toFixed(2);
  document.getElementById('dc').textContent=Math.round(s.dclink_v||0);
  document.getElementById('uo').textContent=Math.round(s.outvolt_v||0);
- document.getElementById('fault').textContent=s.fault?('Störung: '+s.fault_text):'';
- document.getElementById('warntxt').textContent=s.alarm?('Warnung: '+s.warn_text):'';
+ document.getElementById('fault').textContent=s.fault?(t('fault')+': '+ftext(s.fault_num)):'';
+ document.getElementById('warntxt').textContent=s.alarm?(t('warn')+': '+wtext(s.warn_num)):'';
  const sp=document.getElementById('sp');
  if(document.activeElement!==sp){sp.value=s.setpoint_hz;document.getElementById('spv').textContent=s.setpoint_hz;}
  document.getElementById('alarm').textContent='';
- document.getElementById('comm').textContent=s.comm_ok?'':'USS: keine Antwort';
+ document.getElementById('comm').textContent=s.comm_ok?'':t('noreply');
  document.getElementById('comm').className=s.comm_ok?'':'err';
  document.getElementById('stats').textContent=
   `TX ${s.uss.tx} · OK ${s.uss.ok} · Timeout ${s.uss.timeout} · BCC ${s.uss.bcc} · IP ${s.ip}`;
 }catch(e){}}
+document.getElementById('lang').onclick=function(){applyLang(window.LANG=='de'?'en':'de');};
+fetch('/api/config').then(function(r){return r.json();}).then(function(c){applyLang(localStorage.lang||c.language||'de');}).catch(function(){applyLang(localStorage.lang||'de');});
 setInterval(poll,1000);poll();
 </script></body></html>)HTML";
 
@@ -141,36 +152,44 @@ static const char SETTINGS_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
  button{background:#2d6cdf;color:#fff;border:0;border-radius:8px;padding:.6rem 1rem;font-size:1rem;cursor:pointer;margin-top:1rem}
  button.red{background:#c0392b} a{color:#2d6cdf} .msg{margin-top:.6rem}
 </style></head><body>
-<h1>MM440 Einstellungen</h1><a href="/">&larr; zur&uuml;ck</a>
-<div class="card"><b>Ger&auml;t</b>
- <label>Name (HA-Anzeigename)</label><input id="deviceName"></div>
-<div class="card"><b>WLAN</b>
+<h1 data-i18n="title">MM440 Einstellungen</h1><a href="/" data-i18n="back">&larr; zur&uuml;ck</a> <a id="lang" style="float:right;color:#888;cursor:pointer">DE | EN</a>
+<div class="card"><b data-i18n="device">Ger&auml;t</b>
+ <label data-i18n="name">Name (HA-Anzeigename)</label><input id="deviceName">
+ <label data-i18n="langlabel">Sprache / Language</label><select id="language"><option value="de">Deutsch</option><option value="en">English</option></select></div>
+<div class="card"><b data-i18n="wlan">WLAN</b>
  <label>SSID</label><input id="wifiSsid">
- <label>Passwort <span id="wifiPassHint" style="color:#888"></span></label>
- <input id="wifiPass" type="password" placeholder="leer = unver&auml;ndert"></div>
-<div class="card"><b>MQTT</b> (Host leer = deaktiviert)
+ <label><span data-i18n="pass">Passwort</span> <span id="wifiPassHint" style="color:#888"></span></label>
+ <input id="wifiPass" type="password" data-i18n-ph="unchanged" placeholder="leer = unver&auml;ndert"></div>
+<div class="card"><b data-i18n="mqtt">MQTT</b> <span data-i18n="mqtthint">(Host leer = deaktiviert)</span>
  <label>Host</label><input id="mqttHost">
  <label>Port</label><input id="mqttPort" type="number">
- <label>Benutzer</label><input id="mqttUser">
- <label>Passwort <span id="mqttPassHint" style="color:#888"></span></label>
- <input id="mqttPass" type="password" placeholder="leer = unver&auml;ndert"></div>
-<div class="card"><b>USS / Antrieb</b>
+ <label data-i18n="user">Benutzer</label><input id="mqttUser">
+ <label><span data-i18n="pass">Passwort</span> <span id="mqttPassHint" style="color:#888"></span></label>
+ <input id="mqttPass" type="password" data-i18n-ph="unchanged" placeholder="leer = unver&auml;ndert"></div>
+<div class="card"><b data-i18n="uss">USS / Antrieb</b>
  <label>Baud</label><select id="ussBaud">
   <option>9600</option><option>19200</option><option>38400</option>
   <option>57600</option><option>115200</option></select>
- <label>USS-Adresse (0-31)</label><input id="ussSlaveAddr" type="number">
- <label>Bezugsfrequenz P2000 (Hz)</label><input id="refFreqHz" type="number" step="0.1">
- <label>Sollwert min (Hz)</label><input id="setpointMinHz" type="number" step="0.1">
- <label>Sollwert max (Hz)</label><input id="setpointMaxHz" type="number" step="0.1"></div>
-<button onclick="save()">Speichern &amp; Neustart</button>
-<button class="red" onclick="freset()" style="float:right">Werkseinstellungen</button>
+ <label data-i18n="addr">USS-Adresse (0-31)</label><input id="ussSlaveAddr" type="number">
+ <label data-i18n="reffreq">Bezugsfrequenz P2000 (Hz)</label><input id="refFreqHz" type="number" step="0.1">
+ <label data-i18n="spmin">Sollwert min (Hz)</label><input id="setpointMinHz" type="number" step="0.1">
+ <label data-i18n="spmax">Sollwert max (Hz)</label><input id="setpointMaxHz" type="number" step="0.1"></div>
+<button data-i18n="save" onclick="save()">Speichern &amp; Neustart</button>
+<button class="red" data-i18n="freset" onclick="freset()" style="float:right">Werkseinstellungen</button>
 <div id="msg" class="msg"></div>
 <script>
-const F=['deviceName','wifiSsid','mqttHost','mqttPort','mqttUser','ussBaud','ussSlaveAddr','refFreqHz','setpointMinHz','setpointMaxHz'];
+const F=['deviceName','wifiSsid','mqttHost','mqttPort','mqttUser','ussBaud','ussSlaveAddr','refFreqHz','setpointMinHz','setpointMaxHz','language'];
+window.LANG='de';
+const I18N={de:{title:"MM440 Einstellungen",back:"&larr; zurück",device:"Gerät",name:"Name (HA-Anzeigename)",langlabel:"Sprache / Language",wlan:"WLAN",pass:"Passwort",unchanged:"leer = unverändert",set:"(gesetzt)",mqtt:"MQTT",mqtthint:"(Host leer = deaktiviert)",user:"Benutzer",uss:"USS / Antrieb",addr:"USS-Adresse (0-31)",reffreq:"Bezugsfrequenz P2000 (Hz)",spmin:"Sollwert min (Hz)",spmax:"Sollwert max (Hz)",save:"Speichern & Neustart",freset:"Werkseinstellungen",savedok:"Gespeichert. Neustart läuft …",saveerr:"Fehler",fconfirm:"Wirklich auf Werkseinstellungen zurücksetzen?",fmsg:"Zurückgesetzt. Neustart (AP-Modus) …"},en:{title:"MM440 Settings",back:"&larr; back",device:"Device",name:"Name (HA display name)",langlabel:"Language / Sprache",wlan:"Wi-Fi",pass:"Password",unchanged:"empty = unchanged",set:"(set)",mqtt:"MQTT",mqtthint:"(host empty = disabled)",user:"User",uss:"USS / Drive",addr:"USS address (0-31)",reffreq:"Reference frequency P2000 (Hz)",spmin:"Setpoint min (Hz)",spmax:"Setpoint max (Hz)",save:"Save & restart",freset:"Factory reset",savedok:"Saved. Restarting …",saveerr:"Error",fconfirm:"Really reset to factory defaults?",fmsg:"Reset. Restarting (AP mode) …"}};
+function t(k){return (I18N[window.LANG]||I18N.de)[k]||k;}
+function applyLang(l){window.LANG=(l=='en'?'en':'de');localStorage.lang=window.LANG;document.documentElement.lang=window.LANG;document.querySelectorAll('[data-i18n]').forEach(function(e){e.textContent=t(e.dataset.i18n);});document.querySelectorAll('[data-i18n-ph]').forEach(function(e){e.placeholder=t(e.dataset.i18nPh);});}
+
 async function load(){const c=await(await fetch('/api/config')).json();
+ window.LANG=localStorage.lang||c.language||'de';
  for(const k of F){const e=document.getElementById(k);if(e)e.value=c[k];}
- document.getElementById('wifiPassHint').textContent=c.wifiPassSet?'(gesetzt)':'';
- document.getElementById('mqttPassHint').textContent=c.mqttPassSet?'(gesetzt)':'';}
+ document.getElementById('wifiPassHint').textContent=c.wifiPassSet?t('set'):'';
+ document.getElementById('mqttPassHint').textContent=c.mqttPassSet?t('set'):'';
+ applyLang(window.LANG);}
 async function save(){const b={};
  for(const k of F){const e=document.getElementById(k);if(e)b[k]=e.value;}
  b.mqttPort=+b.mqttPort;b.ussBaud=+b.ussBaud;b.ussSlaveAddr=+b.ussSlaveAddr;
@@ -179,10 +198,11 @@ async function save(){const b={};
  const mp=document.getElementById('mqttPass').value;if(mp)b.mqttPass=mp;
  const r=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
  const j=await r.json();
- document.getElementById('msg').textContent=j.ok?'Gespeichert. Neustart läuft …':('Fehler: '+(j.err||r.status));}
-async function freset(){if(!confirm('Wirklich auf Werkseinstellungen zurücksetzen?'))return;
+ document.getElementById('msg').textContent=j.ok?t('savedok'):(t('saveerr')+': '+(j.err||r.status));}
+async function freset(){if(!confirm(t('fconfirm')))return;
  await fetch('/api/factoryreset',{method:'POST'});
- document.getElementById('msg').textContent='Zurückgesetzt. Neustart (AP-Modus) …';}
+ document.getElementById('msg').textContent=t('fmsg');}
+document.getElementById('lang').onclick=function(){applyLang(window.LANG=='de'?'en':'de');};
 load();
 </script></body></html>)HTML";
 
