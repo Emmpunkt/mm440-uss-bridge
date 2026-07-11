@@ -41,6 +41,10 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
  <div class="row"><span>Zustand</span><span id="state" class="st">–</span></div>
  <div class="row"><span>Istfrequenz</span><span class="big"><span id="hz">0.0</span> Hz</span></div>
  <div class="row"><span>ZSW</span><code id="zsw">0x0000</code></div>
+ <div class="row"><span>Motorstrom</span><span><span id="cur">0.0</span> A</span></div>
+ <div class="row"><span>Zwischenkreis</span><span><span id="dc">0</span> V</span></div>
+ <div class="row"><span>Ausgangsspannung</span><span><span id="uo">0</span> V</span></div>
+ <div class="row"><span id="fault" class="err"></span><span id="warntxt" class="warn"></span></div>
  <div class="row"><span id="alarm" class="warn"></span><span id="comm"></span></div>
 </div>
 
@@ -103,7 +107,14 @@ async function poll(){try{
  const st=document.getElementById('state');st.textContent=s.state;st.className='st '+s.state;
  document.getElementById('hz').textContent=s.actual_hz.toFixed(1);
  document.getElementById('zsw').textContent='0x'+s.zsw.toString(16).padStart(4,'0');
- document.getElementById('alarm').textContent=s.alarm?'⚠ Warnung aktiv':'';
+ document.getElementById('cur').textContent=(s.current_a||0).toFixed(2);
+ document.getElementById('dc').textContent=Math.round(s.dclink_v||0);
+ document.getElementById('uo').textContent=Math.round(s.outvolt_v||0);
+ document.getElementById('fault').textContent=s.fault?('Störung: '+s.fault_text):'';
+ document.getElementById('warntxt').textContent=s.alarm?('Warnung: '+s.warn_text):'';
+ const sp=document.getElementById('sp');
+ if(document.activeElement!==sp){sp.value=s.setpoint_hz;document.getElementById('spv').textContent=s.setpoint_hz;}
+ document.getElementById('alarm').textContent='';
  document.getElementById('comm').textContent=s.comm_ok?'':'USS: keine Antwort';
  document.getElementById('comm').className=s.comm_ok?'':'err';
  document.getElementById('stats').textContent=
