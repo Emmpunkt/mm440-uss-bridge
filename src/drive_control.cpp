@@ -1,6 +1,8 @@
 #include "drive_control.h"
 #include "config.h"
 #include "mm440.h"
+#include "mm440_faults.h"
+#include <string.h>
 
 const char* driveStateName(DriveState s) {
   switch (s) {
@@ -88,6 +90,22 @@ void DriveControl::applyControlWord() {
   _uss.setControl(stw, hsw);
 }
 
+static float bitsToFloat(uint32_t b) { float f; memcpy(&f, &b, 4); return f; }
+
+void DriveControl::pollExtra() {
+  uint32_t raw; uint16_t err;
+  switch (_pollIdx) {
+    case 0: if (_uss.readParam(PNU::R_CURRENT,  0, raw, err)) _currentA = bitsToFloat(raw); break;
+    case 1: if (_uss.readParam(PNU::R_DCLINK,   0, raw, err)) _dcLinkV  = bitsToFloat(raw); break;
+    case 2: if (_uss.readParam(PNU::R_VOLT_OUT, 0, raw, err)) _outVoltV = bitsToFloat(raw); break;
+  }
+  _pollIdx = (_pollIdx + 1) % 3;
+  if (fault()) { if (_uss.readParam(PNU::R_FAULT, 0, raw, err)) _faultNum = raw & 0xFFFF; }
+  else _faultNum = 0;
+  if (alarm()) { if (_uss.readParam(PNU::R_ALARM, 0, raw, err)) _warnNum = raw & 0xFFFF; }
+  else _warnNum = 0;
+}
+
 void DriveControl::loop() {
   if (!_relayOn) { _state = DriveState::MAINS_OFF; return; }
 
@@ -108,6 +126,7 @@ void DriveControl::loop() {
     if (fault())        _state = DriveState::FAULT;
     else if (running()) _state = DriveState::RUNNING;
     else                _state = DriveState::READY;
+    pollExtra();                       // rotierender Zusatz-Read (trägt PZD)
   } else {
     if (_commFails < 0xFFFF) _commFails++;
     if (_commFails >= COMM_LOST_AFTER) _state = DriveState::COMM_LOST;

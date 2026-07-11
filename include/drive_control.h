@@ -41,6 +41,11 @@ public:
   float setpointHz() const { return _setpointHz; }
   uint16_t zsw() const { return _uss.zsw(); }
   bool  commOk() const { return _commFails == 0 && _relayOn && _state != DriveState::BOOTING; }
+  float currentA() const { return _currentA; }
+  float dcLinkV()  const { return _dcLinkV; }
+  float outVoltV() const { return _outVoltV; }
+  uint16_t faultNum() const { return _faultNum; }
+  uint16_t warnNum()  const { return _warnNum; }
 
   // Parameterzugriff (Durchreiche an USS, nur bei aktiver Kommunikation)
   bool readParam(uint16_t pnu, uint8_t index, uint32_t& value, uint16_t& err);
@@ -52,6 +57,7 @@ public:
 private:
   void applyControlWord();
   void relayWrite(bool on);
+  void pollExtra();                  // rotierender PKW-Zusatz-Read
 
   UssMaster _uss;
   DriveState _state = DriveState::MAINS_OFF;
@@ -66,4 +72,7 @@ private:
   uint32_t _bootStart = 0;
   uint32_t _lastPoll = 0;
   uint16_t _commFails = 0;
+  float _currentA = 0, _dcLinkV = 0, _outVoltV = 0;
+  uint16_t _faultNum = 0, _warnNum = 0;
+  uint8_t _pollIdx = 0;
 };
