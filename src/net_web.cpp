@@ -347,8 +347,14 @@ void webBegin(DriveControl& drive, const Config& c) {
     WiFi.softAP(AP_SSID, AP_PASS);
   }
 
-  server.on("/", HTTP_GET, [](){ server.send_P(200, "text/html", INDEX_HTML); });
-  server.on("/settings", HTTP_GET, [](){ server.send_P(200, "text/html", SETTINGS_HTML); });
+  server.on("/", HTTP_GET, [](){
+    server.sendHeader("Cache-Control", "no-store");
+    server.send_P(200, "text/html", INDEX_HTML);
+  });
+  server.on("/settings", HTTP_GET, [](){
+    server.sendHeader("Cache-Control", "no-store");
+    server.send_P(200, "text/html", SETTINGS_HTML);
+  });
   server.on("/api/status", HTTP_GET, handleStatus);
   server.on("/api/config", HTTP_GET, handleConfigGet);
   server.on("/api/config", HTTP_POST, handleConfigPost);
