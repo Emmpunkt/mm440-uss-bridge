@@ -225,3 +225,16 @@ Ausgangsspannung, Störungstext und Warnungstext.
 - Der Sollwert ist hart auf die konfigurierten Grenzen begrenzt.
 - **Der ESP ist kein Sicherheitsgerät.** NOT-AUS und Schutztür-Verriegelungen
   gehören in Hardware vor den Umrichter, nicht in diese Firmware.
+
+---
+
+## License / Lizenz
+
+**MIT License** — see [LICENSE](LICENSE).
+
+Free to use, modify and distribute (including commercially). The software is
+provided "as is", without any warranty, and the author accepts no liability.
+
+Freie Nutzung, Änderung und Weitergabe (auch kommerziell). Die Software wird
+„wie besehen" ohne jede Gewährleistung bereitgestellt; der Autor übernimmt
+keine Haftung.
