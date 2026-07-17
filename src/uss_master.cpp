@@ -55,33 +55,51 @@ bool UssMaster::transact(uint16_t pke, uint16_t ind, uint16_t pwe1, uint16_t pwe
   digitalWrite(_dePin, LOW);
   _stats.txCount++;
 
-  // Antwort empfangen (gleicher Rahmen, gleiche Länge)
+  // Antwort empfangen. Off-by-one-Schutz: es kann ein veraltetes/verspätetes
+  // Frame der vorherigen Transaktion im Puffer liegen. Darum jedes Frame gegen
+  // die Anfrage prüfen (Basis-PNU + Seitenbit) und Fremdframes verwerfen, bis
+  // die zur Anfrage passende Antwort kommt oder die Zeit abläuft.
   uint8_t rx[FRAME_LEN];
-  uint8_t got = 0;
   uint32_t t0 = millis();
-  while (got < FRAME_LEN) {
-    if (millis() - t0 > USS_REPLY_TIMEOUT_MS) { _stats.timeouts++; return false; }
-    if (!_ser->available()) { yield(); continue; }
-    uint8_t b = _ser->read();
-    if (got == 0 && b != 0x02) continue;      // auf STX synchronisieren
-    rx[got++] = b;
+  while (millis() - t0 <= USS_REPLY_TIMEOUT_MS) {
+    // ein vollständiges Frame einlesen (auf STX synchronisieren)
+    uint8_t got = 0;
+    bool timedOut = false;
+    while (got < FRAME_LEN) {
+      if (millis() - t0 > USS_REPLY_TIMEOUT_MS) { timedOut = true; break; }
+      if (!_ser->available()) { yield(); continue; }
+      uint8_t b = _ser->read();
+      if (got == 0 && b != 0x02) continue;    // auf STX synchronisieren
+      rx[got++] = b;
+    }
+    if (timedOut) break;
+
+    // Rahmen prüfen — fehlerhaft: verwerfen und nächstes Frame lesen
+    if (rx[1] != NET_LEN + 2)   { _stats.frameErrors++; continue; }
+    if ((rx[2] & 0x1F) != _addr) { _stats.frameErrors++; continue; }
+    uint8_t rbcc = 0;
+    for (uint8_t i = 0; i < FRAME_LEN - 1; i++) rbcc ^= rx[i];
+    if (rbcc != rx[FRAME_LEN - 1]) { _stats.bccErrors++; continue; }
+
+    uint16_t p    = (rx[3] << 8) | rx[4];
+    uint16_t iRx  = (rx[5] << 8) | rx[6];
+    // Gehört die Antwort zur Anfrage? Basis-PNU (11 Bit) + Seitenbit müssen passen.
+    if ((p & 0x07FF) != (pke & 0x07FF) || (iRx & 0x8000) != (ind & 0x8000)) {
+      _stats.frameErrors++;                   // veraltetes/fremdes Frame -> weiterlesen
+      continue;
+    }
+
+    rPke  = p;
+    rInd  = iRx;
+    rPwe1 = (rx[7] << 8)  | rx[8];
+    rPwe2 = (rx[9] << 8)  | rx[10];
+    _zsw  = (rx[11] << 8) | rx[12];
+    _hiw  = (int16_t)((rx[13] << 8) | rx[14]);
+    _stats.rxOk++;
+    return true;
   }
-
-  // Prüfen
-  if (rx[1] != NET_LEN + 2) { _stats.frameErrors++; return false; }
-  if ((rx[2] & 0x1F) != _addr) { _stats.frameErrors++; return false; }
-  uint8_t rbcc = 0;
-  for (uint8_t i = 0; i < FRAME_LEN - 1; i++) rbcc ^= rx[i];
-  if (rbcc != rx[FRAME_LEN - 1]) { _stats.bccErrors++; return false; }
-
-  rPke  = (rx[3] << 8)  | rx[4];
-  rInd  = (rx[5] << 8)  | rx[6];
-  rPwe1 = (rx[7] << 8)  | rx[8];
-  rPwe2 = (rx[9] << 8)  | rx[10];
-  _zsw  = (rx[11] << 8) | rx[12];
-  _hiw  = (int16_t)((rx[13] << 8) | rx[14]);
-  _stats.rxOk++;
-  return true;
+  _stats.timeouts++;
+  return false;
 }
 
 // ------------------------------------------------------------
