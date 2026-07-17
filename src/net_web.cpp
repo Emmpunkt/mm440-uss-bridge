@@ -46,6 +46,7 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
  <div class="row"><span data-i18n="uout">Ausgangsspannung</span><span><span id="uo">0</span> V</span></div>
  <div class="row"><span id="fault" class="err"></span><span id="warntxt" class="warn"></span></div>
  <div class="row"><span id="alarm" class="warn"></span><span id="comm"></span></div>
+ <div class="row"><span data-i18n="wlan">WLAN</span><span><span id="rssi">–</span> dBm <span id="rssiq"></span></span></div>
 </div>
 
 <div class="card">
@@ -89,9 +90,10 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
 <script>
 async function cmd(o){await fetch('/api/cmd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)});poll();}
 window.LANG='de';
-const I18N={de:{settings:"⚙ Einstellungen",zustand:"Zustand",istfreq:"Istfrequenz",strom:"Motorstrom",zk:"Zwischenkreis",uout:"Ausgangsspannung",netz:"Netzschütz",ein:"Ein",aus:"Aus",motor:"Motor",start:"Start",stopp:"Stopp",quit:"Quittieren",soll:"Sollwert:",rev:"Drehrichtung umkehren",param:"Parameter",idx:"Idx",read:"Lesen",wert:"Wert",int:"Ganzzahl",write:"Schreiben",fault:"Störung",warn:"Warnung",noreply:"USS: keine Antwort"},en:{settings:"⚙ Settings",zustand:"State",istfreq:"Actual frequency",strom:"Motor current",zk:"DC link",uout:"Output voltage",netz:"Mains contactor",ein:"On",aus:"Off",motor:"Motor",start:"Start",stopp:"Stop",quit:"Acknowledge",soll:"Setpoint:",rev:"Reverse direction",param:"Parameter",idx:"Idx",read:"Read",wert:"Value",int:"Integer",write:"Write",fault:"Fault",warn:"Warning",noreply:"USS: no reply"}};
+const I18N={de:{settings:"⚙ Einstellungen",wlan:"WLAN",qExc:"Ausgezeichnet",qGood:"Gut",qFair:"Mittel",qWeak:"Schwach",zustand:"Zustand",istfreq:"Istfrequenz",strom:"Motorstrom",zk:"Zwischenkreis",uout:"Ausgangsspannung",netz:"Netzschütz",ein:"Ein",aus:"Aus",motor:"Motor",start:"Start",stopp:"Stopp",quit:"Quittieren",soll:"Sollwert:",rev:"Drehrichtung umkehren",param:"Parameter",idx:"Idx",read:"Lesen",wert:"Wert",int:"Ganzzahl",write:"Schreiben",fault:"Störung",warn:"Warnung",noreply:"USS: keine Antwort"},en:{settings:"⚙ Settings",wlan:"Wi-Fi",qExc:"Excellent",qGood:"Good",qFair:"Fair",qWeak:"Weak",zustand:"State",istfreq:"Actual frequency",strom:"Motor current",zk:"DC link",uout:"Output voltage",netz:"Mains contactor",ein:"On",aus:"Off",motor:"Motor",start:"Start",stopp:"Stop",quit:"Acknowledge",soll:"Setpoint:",rev:"Reverse direction",param:"Parameter",idx:"Idx",read:"Read",wert:"Value",int:"Integer",write:"Write",fault:"Fault",warn:"Warning",noreply:"USS: no reply"}};
 const FAULTS={1:["Überstrom","Overcurrent"],2:["Überspannung","Overvoltage"],3:["Unterspannung","Undervoltage"],4:["Umrichter-Übertemperatur","Inverter over-temperature"],5:["Umrichter I²t","Inverter I²t"],11:["Motor-Übertemperatur","Motor over-temperature"],12:["Umrichtertemp Signalverlust","Inverter temp signal lost"],15:["Motortemp Signalverlust","Motor temp signal lost"],20:["Netzphasenausfall","Mains phase loss"],21:["Erdschluss","Earth fault"],22:["Leistungsteil-Störung (HW)","Power stack fault (HW)"],23:["Ausgangsfehler","Output fault"],30:["Lüfter defekt","Fan failed"],35:["Auto-Wiederanlauf","Auto restart"],41:["Motordaten-Identifikation","Motor data identification"],42:["Drehzahlregler-Optimierung","Speed control optimization"],51:["Parameter-EEPROM","Parameter EEPROM"],52:["Leistungsteil (Lesefehler)","Power stack (read error)"],60:["Asic-Timeout","ASIC timeout"],70:["CB-Sollwert (Comm-Board)","CB setpoint (comm board)"],71:["USS BOP-Link Telegrammausfall","USS BOP-link telegram loss"],72:["USS COM-Link Telegrammausfall","USS COM-link telegram loss"],80:["ADC Signalverlust","ADC signal lost"],85:["Externe Störung","External fault"],101:["Stapelüberlauf","Stack overflow"],221:["PID-Rückführung < min","PID feedback < min"],222:["PID-Rückführung > max","PID feedback > max"],450:["BIST-Diagnose","BIST diagnostics"]},WARNS={501:["Strombegrenzung","Current limit"],502:["Überspannungsgrenze","Overvoltage limit"],503:["Unterspannungsgrenze","Undervoltage limit"],504:["Umrichter-Übertemperatur","Inverter over-temperature"],505:["Umrichter I²t","Inverter I²t"],506:["Umrichter-Lastspiel","Inverter duty cycle"],511:["Motor-Übertemperatur","Motor over-temperature"],512:["Motortemp Signalverlust","Motor temp signal lost"],520:["Kühlkörper-Übertemperatur","Heatsink over-temperature"],521:["Umgebungs-Übertemperatur","Ambient over-temperature"],522:["I²C Lesetimeout","I²C read timeout"],523:["Ausgangsfehler","Output fault"],541:["Motordaten-Identifikation aktiv","Motor data identification active"],542:["Drehzahlregler-Opt aktiv","Speed control opt active"],590:["Geber Signalverlust","Encoder signal lost"],600:["RTOS Overrun","RTOS overrun"],700:["CB-Warnung","CB warning"],710:["USS BOP-Link Komm-Fehler","USS BOP-link comm error"],711:["USS COM-Link Komm-Fehler","USS COM-link comm error"],910:["Vdc-max-Regler inaktiv","Vdc-max controller inactive"],911:["Vdc-max-Regler aktiv","Vdc-max controller active"],920:["ADC-Parameter falsch","ADC parameters wrong"],922:["Keine Last am Umrichter","No load on inverter"],923:["JOG links+rechts gleichzeitig","JOG left+right simultaneously"]};
 function t(k){return (I18N[window.LANG]||I18N.de)[k]||k;}
+function wq(r){var k=r>=-60?'qExc':r>=-70?'qGood':r>=-80?'qFair':'qWeak';return t(k);}
 function pad4(n){return ('000'+n).slice(-4);}
 function ftext(n){var e=FAULTS[n];return e?e[window.LANG=='en'?1:0]:(n?'F'+pad4(n):'');}
 function wtext(n){var e=WARNS[n];return e?e[window.LANG=='en'?1:0]:(n?'A'+pad4(n):'');}
@@ -132,6 +134,7 @@ async function poll(){try{
  document.getElementById('alarm').textContent='';
  document.getElementById('comm').textContent=s.comm_ok?'':t('noreply');
  document.getElementById('comm').className=s.comm_ok?'':'err';
+ document.getElementById('rssi').textContent=(s.rssi||0);document.getElementById('rssiq').textContent=s.rssi?('('+wq(s.rssi)+')'):'';
  document.getElementById('stats').textContent=
   `TX ${s.uss.tx} · OK ${s.uss.ok} · Timeout ${s.uss.timeout} · BCC ${s.uss.bcc} · IP ${s.ip}`;
 }catch(e){}}
@@ -228,6 +231,7 @@ static void handleStatus() {
   bool en = strcmp(configGet().language, "en") == 0;
   d["fault_text"] = drv->fault() ? faultLabel(drv->faultNum(), en) : String("");
   d["warn_text"]  = drv->alarm() ? warnLabel(drv->warnNum(), en)  : String("");
+  d["rssi"] = (int)WiFi.RSSI();
   d["ip"] = wifiIp();
   JsonObject u = d["uss"].to<JsonObject>();
   u["tx"] = drv->ussStats().txCount;

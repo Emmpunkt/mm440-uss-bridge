@@ -179,6 +179,19 @@ static void publishDiscovery() {
     d["availability_topic"] = topic("availability");
     pub("sensor", "wtext", d);
   }
+  // WLAN-Signal (RSSI)
+  {
+    JsonDocument d; addDevice(d);
+    d["name"] = L("WLAN-Signal", "Wi-Fi signal");
+    d["unique_id"] = String(devId) + "_rssi";
+    d["state_topic"] = topic("state");
+    d["value_template"] = "{{ value_json.rssi }}";
+    d["unit_of_measurement"] = "dBm";
+    d["device_class"] = "signal_strength"; d["state_class"] = "measurement";
+    d["entity_category"] = "diagnostic";
+    d["availability_topic"] = topic("availability");
+    pub("sensor", "rssi", d);
+  }
 }
 
 static void publishState() {
@@ -195,6 +208,7 @@ static void publishState() {
   d["current_a"] = drv->currentA();
   d["dclink_v"]  = drv->dcLinkV();
   d["outvolt_v"] = drv->outVoltV();
+  d["rssi"]      = (int)WiFi.RSSI();
   d["fault_text"] = drv->fault() ? faultLabel(drv->faultNum(), langEn) : String("");
   d["warn_text"]  = drv->alarm() ? warnLabel(drv->warnNum(), langEn)  : String("");
   String out; serializeJson(d, out);
