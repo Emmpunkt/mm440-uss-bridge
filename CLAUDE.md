@@ -51,7 +51,7 @@ mm440.h           STW/ZSW-Bits, PNU-Konstanten, Skalierung (0x4000 = P2000)
 drive_control.*   Zustandsmaschine MAINS_OFF→BOOTING→READY/RUNNING/FAULT/
                   COMM_LOST; Relais-Sequenzierung (mainsOff stoppt erst den
                   Motor); Quittier-Flanke; Sollwertbegrenzung
-net_web.*         WLAN STA mit AP-Fallback (MM440-Bridge/mm440setup),
+net_web.*         WLAN STA mit AP-Fallback (SSID/Passwort aus config.h),
                   REST-API + eingebettete HTML-Seite (PROGMEM)
 net_mqtt.*        PubSubClient, HA-Discovery (sensor/binary_sensor/switch/
                   number/button), LWT auf mm440/availability. MQTT_HOST

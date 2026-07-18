@@ -10,6 +10,16 @@
   UI and MQTT / Home Assistant discovery.
 </p>
 
+<p align="center">
+  <b>Built on this?</b> See
+  <a href="https://github.com/Emmpunkt/mm440-schraegaufzug">mm440-schraegaufzug</a> —
+  a material hoist controller that adds creep-speed approach, remote control and
+  position travel on top of this bridge.<br>
+  <b>Darauf aufgebaut:</b>
+  <a href="https://github.com/Emmpunkt/mm440-schraegaufzug">mm440-schraegaufzug</a> —
+  Schrägaufzug-Steuerung mit Schleichgang, Fernsteuerung und Positionsfahrt.
+</p>
+
 ---
 
 *English below · [Deutsch weiter unten](#deutsch)*
@@ -88,7 +98,7 @@ pio device monitor     # debug log
 ```
 
 If WLAN is not reachable the device opens an access point `MM440-Bridge`
-(password `mm440setup`, UI at `192.168.4.1`).
+(password from `config.h`, UI at `192.168.4.1`).
 
 ### Web interface & REST API
 
@@ -196,7 +206,7 @@ pio device monitor     # Debug-Log
 ```
 
 Ist kein WLAN erreichbar, öffnet das Gerät den Accesspoint `MM440-Bridge`
-(Passwort `mm440setup`, UI unter `192.168.4.1`).
+(Passwort aus `config.h`, UI unter `192.168.4.1`).
 
 ### Webinterface & REST-API
 

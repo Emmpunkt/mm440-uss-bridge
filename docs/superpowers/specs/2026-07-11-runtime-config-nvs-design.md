@@ -116,7 +116,7 @@ bekommen einen `const Config&`-Parameter; sie lesen daraus statt aus den Makros:
 ## Fehlerbehandlung / Wiederherstellung
 
 - Falsche WLAN-Daten sperren nicht aus: der bestehende AP-Fallback
-  (`MM440-Bridge`/`mm440setup`) greift weiterhin, wenn STA nicht verbindet →
+  (SSID/Passwort aus `config.h`) greift weiterhin, wenn STA nicht verbindet →
   darüber `/settings` erreichbar und korrigierbar.
 - Ungültiger/leerer NVS → Factory-Defaults (Bridge bootet immer).
 - NVS-Schreibfehler → `{"ok":false}`, kein Reboot.

@@ -60,10 +60,10 @@
 #define HOSTNAME    "mm440-bridge"
 // Fällt das WLAN aus / ist nicht konfiguriert, startet ein eigener AP:
 #define AP_SSID     "MM440-Bridge"
-#define AP_PASS     "mm440setup"    // min. 8 Zeichen
+#define AP_PASS     "CHANGE_ME"     // min. 8 Zeichen
 #define WIFI_CONNECT_TIMEOUT_MS 15000
 // OTA (Over-the-Air-Update über WLAN, nur im STA-Modus). Leer = ohne Passwort.
-#define OTA_PASSWORD "mm440ota"
+#define OTA_PASSWORD "CHANGE_ME"
 
 // ============================================================
 //  MQTT / Home Assistant  (MQTT_HOST leer lassen => deaktiviert,

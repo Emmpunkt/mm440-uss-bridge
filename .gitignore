@@ -9,3 +9,6 @@ compile_commands.json
 
 # Zugangsdaten — nur config.example.h wird versioniert
 include/config.h
+
+# Lokale OTA-Adresse und -Passwort
+platformio_local.ini
